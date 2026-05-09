@@ -8,6 +8,7 @@
 #include <omp.h>
 #include <vector>
 #include <algorithm>
+#include <cstdint>
 // 可以自行添加需要的头文件
 
 void fRead(int *a, int *b, int *n, int *p, int input_id){
@@ -84,8 +85,60 @@ long long qpow(long long a, long long b, int p) {
     return res;
 }
 
+struct Montgomery32{
+    using u32 = uint32_t;
+    using u64 = uint64_t;
+
+    u32 mod;
+    u32 inv;
+    u32 r2;
+    explicit Montgomery32(u32 p) : mod(p) {
+        u32 x = 1;
+        for (int i = 0; i < 5; ++i) {
+            x *= 2 - mod * x;
+        }
+        inv = 0 - x;
+
+        u64 r = (u64(1) << 32) % mod;
+        r2 = u32(r * r % mod);
+    }
+    u32 reduce(u64 x) const {
+    //    u32 q = u32(x) * u64(inv);
+        u32 q = (u32)((x & 0xffffffffULL) * inv);
+        u64 y = (x + u64(q) * mod) >> 32;
+        if (y >= mod) y -= mod;
+        return u32(y);
+    }
+
+    u32 init(u32 x) const {
+        return reduce(u64(x) * r2);
+    }
+        u32 value(u32 x) const {
+        return reduce(x);
+    }
+
+    u32 one() const {
+        return init(1);
+    }
+
+    u32 add(u32 a, u32 b) const {
+        u32 c = a + b;
+        if (c >= mod) c -= mod;
+        return c;
+    }
+
+    u32 sub(u32 a, u32 b) const {
+        return a >= b ? a - b : a + mod - b;
+    }
+
+    u32 mul(u32 a, u32 b) const {
+        return reduce(u64(a) * b);
+    }
+};
+
 void ntt(std::vector<int>& f, int p, bool inverse) {
     int n = f.size();
+    Montgomery32 mont((uint32_t)p);
 
     for (int i = 1, j = 0; i < n; ++i) {
         int bit = n >> 1;
@@ -98,35 +151,30 @@ void ntt(std::vector<int>& f, int p, bool inverse) {
     }
 
     for (int len = 2; len <= n; len <<= 1) {
-        long long wn = qpow(3, (p - 1) / len, p);
+        int wn_normal = (int)qpow(3, (p - 1) / len, p);
         if (inverse) {
-            wn = qpow(wn, p - 2, p);
+            wn_normal = (int)qpow(wn_normal, p - 2, p);
         }
+        uint32_t wn = mont.init((uint32_t)wn_normal);
 
         for (int i = 0; i < n; i += len) {
-            long long w = 1;
+            uint32_t w = mont.one();
             for (int j = 0; j < len / 2; ++j) {
-                int u = f[i + j];
-                int v = w * f[i + j + len / 2] % p;
+                uint32_t u = (uint32_t)f[i + j];
+                uint32_t v = mont.mul(w, (uint32_t)f[i + j + len / 2]);
 
-                int x = u + v;
-                if (x >= p) x -= p;
+                f[i + j] = (int)mont.add(u, v);
+                f[i + j + len / 2] = (int)mont.sub(u, v);
 
-                int y = u - v;
-                if (y < 0) y += p;
-
-                f[i + j] = x;
-                f[i + j + len / 2] = y;
-
-                w = w * wn % p;
+                w = mont.mul(w, wn);
             }
         }
     }
 
     if (inverse) {
-        long long inv_n = qpow(n, p - 2, p);
+        uint32_t inv_n = mont.init((uint32_t)qpow(n, p - 2, p));
         for (int i = 0; i < n; ++i) {
-            f[i] = inv_n * f[i] % p;
+            f[i] = (int)mont.mul((uint32_t)f[i], inv_n);
         }
     }
 }
@@ -134,25 +182,26 @@ void ntt(std::vector<int>& f, int p, bool inverse) {
 void poly_multiply_ntt(int *a, int *b, int *ab, int n, int p) {
     int lim = 1;
     while (lim < 2 * n - 1) lim <<= 1;
-
+    
+    Montgomery32 mont((uint32_t)p);
     std::vector<int> A(lim), B(lim);
 
     for (int i = 0; i < n; ++i) {
-        A[i] = a[i];
-        B[i] = b[i];
+        A[i] = (int)mont.init((uint32_t)a[i]);
+        B[i] = (int)mont.init((uint32_t)b[i]);
     }
 
     ntt(A, p, false);
     ntt(B, p, false);
 
     for (int i = 0; i < lim; ++i) {
-        A[i] = 1LL * A[i] * B[i] % p;
+        A[i] = (int)mont.mul((uint32_t)A[i], (uint32_t)B[i]);
     }
 
     ntt(A, p, true);
 
     for (int i = 0; i < 2 * n - 1; ++i) {
-        ab[i] = A[i];
+        ab[i] = (int)mont.value((uint32_t)A[i]);
     }
 }
 
@@ -168,7 +217,7 @@ int main(int argc, char *argv[])
     // 输入文件共五个, 第一个输入文件 n = 4, 其余四个文件分别对应四个模数, n = 131072
     // 在实现快速数论变化前, 后四个测试样例运行时间较久, 推荐调试正确性时只使用输入文件 1
     int test_begin = 0;
-    int test_end = 1;
+    int test_end = 3;
     for(int i = test_begin; i <= test_end; ++i){
         long double ans = 0;
         int n_, p_;
@@ -189,3 +238,4 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
+ 
