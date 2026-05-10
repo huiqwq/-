@@ -139,79 +139,28 @@ struct Montgomery32{
     }
 };
 
-// void ntt(std::vector<int>& f, int p, bool inverse) {
-//     int n = f.size();
-//     Montgomery32 mont((uint32_t)p);
+static inline uint32x2_t montgomery_reduce2_neon(uint64x2_t x, uint32_t mod, uint32_t inv) {
+    uint32x2_t low = vmovn_u64(x);
+    uint32x2_t q = vmul_u32(low, vdup_n_u32(inv));
+    uint64x2_t q_mod = vmull_u32(q, vdup_n_u32(mod));
+    uint64x2_t y64 = vshrq_n_u64(vaddq_u64(x, q_mod), 32);
+    uint32x2_t y = vmovn_u64(y64);
+    uint32x2_t mod_v = vdup_n_u32(mod);
+    uint32x2_t ge_mod = vcge_u32(y, mod_v);
+    return vsub_u32(y, vand_u32(ge_mod, mod_v));
+}
 
-//     for (int i = 1, j = 0; i < n; ++i) {
-//         int bit = n >> 1;
-//         while (j & bit) {
-//             j ^= bit;
-//             bit >>= 1;
-//         }
-//         j ^= bit;
-//         if (i < j) std::swap(f[i], f[j]);
-//     }
+static inline uint32x4_t montgomery_mul4_neon(uint32x4_t a, uint32x4_t b, const Montgomery32& mont) {
+    uint64x2_t prod_low = vmull_u32(vget_low_u32(a), vget_low_u32(b));
+    uint64x2_t prod_high = vmull_u32(vget_high_u32(a), vget_high_u32(b));
+    uint32x2_t low = montgomery_reduce2_neon(prod_low, mont.mod, mont.inv);
+    uint32x2_t high = montgomery_reduce2_neon(prod_high, mont.mod, mont.inv);
+    return vcombine_u32(low, high);
+}
 
-//     for (int len = 2; len <= n; len <<= 1) {
-//         int wn_normal = (int)qpow(3, (p - 1) / len, p);
-//         if (inverse) {
-//             wn_normal = (int)qpow(wn_normal, p - 2, p);
-//         }
-//         uint32_t wn = mont.init((uint32_t)wn_normal);
-
-//         for (int i = 0; i < n; i += len) {
-//             uint32_t w = mont.one();
-//             for (int j = 0; j < len / 2; ++j) {
-//                 uint32_t u = (uint32_t)f[i + j];
-//                 uint32_t v = mont.mul(w, (uint32_t)f[i + j + len / 2]);
-
-//                 f[i + j] = (int)mont.add(u, v);
-//                 f[i + j + len / 2] = (int)mont.sub(u, v);
-
-//                 w = mont.mul(w, wn);
-//             }
-//         }
-//     }
-
-//     if (inverse) {
-//         uint32_t inv_n = mont.init((uint32_t)qpow(n, p - 2, p));
-//         for (int i = 0; i < n; ++i) {
-//             f[i] = (int)mont.mul((uint32_t)f[i], inv_n);
-//         }
-//     }
-// }
-
-// void poly_multiply_ntt(int *a, int *b, int *ab, int n, int p) {
-//     int lim = 1;
-//     while (lim < 2 * n - 1) lim <<= 1;
-    
-//     Montgomery32 mont((uint32_t)p);
-//     std::vector<int> A(lim), B(lim);
-
-//     for (int i = 0; i < n; ++i) {
-//         A[i] = (int)mont.init((uint32_t)a[i]);
-//         B[i] = (int)mont.init((uint32_t)b[i]);
-//     }
-
-//     ntt(A, p, false);
-//     ntt(B, p, false);
-
-//     for (int i = 0; i < lim; ++i) {
-//         A[i] = (int)mont.mul((uint32_t)A[i], (uint32_t)B[i]);
-//     }
-
-//     ntt(A, p, true);
-
-//     for (int i = 0; i < 2 * n - 1; ++i) {
-//         ab[i] = (int)mont.value((uint32_t)A[i]);
-//     }
-// }
-
-static inline void butterfly_addsub4_neon(int *left, int *right, const uint32_t v_buf[4], uint32_t mod) {
+static inline void butterfly_addsub4_neon(int *left, int *right, uint32x4_t v, uint32_t mod) {
     uint32x4_t mod_v = vdupq_n_u32(mod);
     uint32x4_t u = vreinterpretq_u32_s32(vld1q_s32(reinterpret_cast<const int32_t*>(left)));
-    uint32x4_t v = vld1q_u32(v_buf);
 
     uint32x4_t sum = vaddq_u32(u, v);
     uint32x4_t sum_ge_mod = vcgeq_u32(sum, mod_v);
@@ -225,7 +174,7 @@ static inline void butterfly_addsub4_neon(int *left, int *right, const uint32_t 
     vst1q_s32(reinterpret_cast<int32_t*>(right), vreinterpretq_s32_u32(diff));
 }
 
-void ntt_simd(std::vector<int>& f, int p, bool inverse) {
+void ntt_montgomery_simd(std::vector<int>& f, int p, bool inverse) {
     int n = f.size();
     Montgomery32 mont((uint32_t)p);
 
@@ -250,19 +199,20 @@ void ntt_simd(std::vector<int>& f, int p, bool inverse) {
         for (int i = 0; i < n; i += len) {
             uint32_t w = mont.one();
             int j = 0;
-
+            uint32_t roots_buf[4];
             for (; j + 4 <= half; j += 4) {
-                uint32_t v_buf[4];
-                v_buf[0] = mont.mul(w, (uint32_t)f[i + j + half]);
-                w = mont.mul(w, wn);
-                v_buf[1] = mont.mul(w, (uint32_t)f[i + j + half + 1]);
-                w = mont.mul(w, wn);
-                v_buf[2] = mont.mul(w, (uint32_t)f[i + j + half + 2]);
-                w = mont.mul(w, wn);
-                v_buf[3] = mont.mul(w, (uint32_t)f[i + j + half + 3]);
-                w = mont.mul(w, wn);
+                roots_buf[0] = w;
+                roots_buf[1] = mont.mul(roots_buf[0], wn);
+                roots_buf[2] = mont.mul(roots_buf[1], wn);
+                roots_buf[3] = mont.mul(roots_buf[2], wn);
+                w = mont.mul(roots_buf[3], wn);
+                uint32x4_t roots = vld1q_u32(roots_buf);
+                uint32x4_t right = vreinterpretq_u32_s32(
+                    vld1q_s32(reinterpret_cast<const int32_t*>(&f[i + j + half]))
+                );
+                uint32x4_t v = montgomery_mul4_neon(roots, right, mont);
 
-                butterfly_addsub4_neon(&f[i + j], &f[i + j + half], v_buf, (uint32_t)p);
+                butterfly_addsub4_neon(&f[i + j], &f[i + j + half], v, (uint32_t)p);
             }
 
             for (; j < half; ++j) {
@@ -279,13 +229,20 @@ void ntt_simd(std::vector<int>& f, int p, bool inverse) {
 
     if (inverse) {
         uint32_t inv_n = mont.init((uint32_t)qpow(n, p - 2, p));
-        for (int i = 0; i < n; ++i) {
+        uint32x4_t inv_n_vec = vdupq_n_u32(inv_n);
+        int i = 0;
+        for (; i + 4 <= n; i += 4) {
+            uint32x4_t val = vreinterpretq_u32_s32(vld1q_s32(reinterpret_cast<const int32_t*>(&f[i])));
+            uint32x4_t scaled = montgomery_mul4_neon(val, inv_n_vec, mont);
+            vst1q_s32(reinterpret_cast<int32_t*>(&f[i]), vreinterpretq_s32_u32(scaled));
+        }
+        for (; i < n; ++i) {
             f[i] = (int)mont.mul((uint32_t)f[i], inv_n);
         }
     }
 }
 
-void poly_multiply_ntt_simd(int *a, int *b, int *ab, int n, int p) {
+void poly_multiply_ntt_montgomery_simd(int *a, int *b, int *ab, int n, int p) {
     int lim = 1;
     while (lim < 2 * n - 1) lim <<= 1;
 
@@ -297,19 +254,28 @@ void poly_multiply_ntt_simd(int *a, int *b, int *ab, int n, int p) {
         B[i] = (int)mont.init((uint32_t)b[i]);
     }
 
-    ntt_simd(A, p, false);
-    ntt_simd(B, p, false);
+    ntt_montgomery_simd(A, p, false);
+    ntt_montgomery_simd(B, p, false);
 
-    for (int i = 0; i < lim; ++i) {
+    int i = 0;
+    for (; i + 4 <= lim; i += 4) {
+        uint32x4_t va = vreinterpretq_u32_s32(vld1q_s32(reinterpret_cast<const int32_t*>(&A[i])));
+        uint32x4_t vb = vreinterpretq_u32_s32(vld1q_s32(reinterpret_cast<const int32_t*>(&B[i])));
+        uint32x4_t vc = montgomery_mul4_neon(va, vb, mont);
+        vst1q_s32(reinterpret_cast<int32_t*>(&A[i]), vreinterpretq_s32_u32(vc));
+    }
+
+    for (; i < lim; ++i) {
         A[i] = (int)mont.mul((uint32_t)A[i], (uint32_t)B[i]);
     }
 
-    ntt_simd(A, p, true);
+    ntt_montgomery_simd(A, p, true);
 
     for (int i = 0; i < 2 * n - 1; ++i) {
         ab[i] = (int)mont.value((uint32_t)A[i]);
     }
 }
+
 
 int a[300000], b[300000], ab[300000];
 int main(int argc, char *argv[])
@@ -332,7 +298,7 @@ int main(int argc, char *argv[])
         // TODO : 将 poly_multiply 函数替换成你写的 ntt
         //poly_multiply(a, b, ab, n_, p_);
         //poly_multiply_ntt(a,b,ab,n_,p_);
-        poly_multiply_ntt_simd(a,b,ab,n_,p_);
+        poly_multiply_ntt_montgomery_simd(a,b,ab,n_,p_);
         auto End = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double,std::ratio<1,1000>>elapsed = End - Start;
         ans += elapsed.count();
