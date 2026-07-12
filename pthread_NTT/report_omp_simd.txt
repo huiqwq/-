@@ -1,0 +1,613 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 282  of event 'cycles:u'
+# Event count (approx.): 894430784
+#
+# Children      Self  Command  Shared Object          Symbol                                                                                                         
+# ........  ........  .......  .....................  ...............................................................................................................
+#
+    81.76%     0.00%  main     main                   [.] poly_multiply_crt_openmp_modparallel
+            |
+            ---poly_multiply_crt_openmp_modparallel
+               |          
+                --81.75%--multiply_mod_ntt
+                          |          
+                          |--44.43%--ntt_serial
+                          |          
+                           --36.83%--ntt_serial
+
+    81.75%     0.49%  main     main                   [.] multiply_mod_ntt
+            |          
+             --81.26%--multiply_mod_ntt
+                       |          
+                       |--44.43%--ntt_serial
+                       |          
+                        --36.83%--ntt_serial
+
+    64.68%     0.00%  main     libc.so.6              [.] 0x0000ffff9aaa9d5c
+            |
+            ---0xffff9aaa9d5c
+               0xffff9aa42518
+               |          
+                --64.68%--0xffff9abc97e0
+                          |          
+                          |--61.60%--poly_multiply_crt_openmp_modparallel
+                          |          |          
+                          |           --61.59%--multiply_mod_ntt
+                          |                     |          
+                          |                     |--33.61%--ntt_serial
+                          |                     |          
+                          |                      --27.50%--ntt_serial
+                          |          
+                          |--2.15%--__umodti3
+                          |          
+                           --0.93%--poly_multiply_crt_openmp_modparallel
+
+    64.68%     0.00%  main     libc.so.6              [.] 0x0000ffff9aa42518
+            |
+            ---0xffff9aa42518
+               |          
+                --64.68%--0xffff9abc97e0
+                          |          
+                          |--61.60%--poly_multiply_crt_openmp_modparallel
+                          |          |          
+                          |           --61.59%--multiply_mod_ntt
+                          |                     |          
+                          |                     |--33.61%--ntt_serial
+                          |                     |          
+                          |                      --27.50%--ntt_serial
+                          |          
+                          |--2.15%--__umodti3
+                          |          
+                           --0.93%--poly_multiply_crt_openmp_modparallel
+
+    64.68%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffff9abc97e0
+            |
+            ---0xffff9abc97e0
+               |          
+               |--61.60%--poly_multiply_crt_openmp_modparallel
+               |          |          
+               |           --61.59%--multiply_mod_ntt
+               |                     |          
+               |                     |--33.61%--ntt_serial
+               |                     |          
+               |                      --27.50%--ntt_serial
+               |          
+               |--2.15%--__umodti3
+               |          
+                --0.93%--poly_multiply_crt_openmp_modparallel
+
+    44.43%    44.43%  main     main                   [.] ntt_serial
+            |          
+            |--33.61%--0xffff9aaa9d5c
+            |          0xffff9aa42518
+            |          0xffff9abc97e0
+            |          poly_multiply_crt_openmp_modparallel
+            |          multiply_mod_ntt
+            |          ntt_serial
+            |          
+             --10.82%--_start
+                       __libc_start_main
+                       0xffff9a9eb000
+                       main
+                       poly_multiply_crt_openmp_modparallel
+                       GOMP_parallel
+                       poly_multiply_crt_openmp_modparallel
+                       multiply_mod_ntt
+                       ntt_serial
+
+    36.83%    36.83%  main     main                   [.] ntt_serial
+            |          
+            |--27.50%--0xffff9aaa9d5c
+            |          0xffff9aa42518
+            |          0xffff9abc97e0
+            |          poly_multiply_crt_openmp_modparallel
+            |          multiply_mod_ntt
+            |          ntt_serial
+            |          
+             --9.33%--_start
+                       __libc_start_main
+                       0xffff9a9eb000
+                       main
+                       poly_multiply_crt_openmp_modparallel
+                       GOMP_parallel
+                       poly_multiply_crt_openmp_modparallel
+                       multiply_mod_ntt
+                       ntt_serial
+
+    35.32%     0.00%  main     main                   [.] _start
+            |
+            ---_start
+               __libc_start_main
+               0xffff9a9eb000
+               main
+               |          
+               |--22.14%--poly_multiply_crt_openmp_modparallel
+               |          |          
+               |           --22.14%--GOMP_parallel
+               |                     |          
+               |                     |--20.15%--poly_multiply_crt_openmp_modparallel
+               |                     |          |          
+               |                     |           --20.15%--multiply_mod_ntt
+               |                     |                     |          
+               |                     |                     |--10.82%--ntt_serial
+               |                     |                     |          
+               |                     |                      --9.33%--ntt_serial
+               |                     |          
+               |                     |--1.00%--__umodti3
+               |                     |          
+               |                      --0.98%--poly_multiply_crt_openmp_modparallel
+               |          
+               |--6.57%--fWrite
+               |          |          
+               |          |--4.87%--std::ostream::_M_insert<unsigned long>
+               |          |          |          
+               |          |          |--2.38%--0xffff9adde578
+               |          |          |          
+               |          |           --1.63%--std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               |          |                     |          
+               |          |                     |--0.87%--std::basic_streambuf<char, std::char_traits<char> >::xsputn
+               |          |                     |          
+               |          |                      --0.76%--std::codecvt<char, char, __mbstate_t>::do_always_noconv
+               |          |          
+               |           --1.70%--std::__ostream_insert<char, std::char_traits<char> >
+               |                     |          
+               |                      --0.88%--std::ostream::sentry::sentry
+               |          
+               |--3.34%--fCheck
+               |          |          
+               |           --3.18%--std::istream::_M_extract<unsigned long>
+               |                     |          
+               |                     |--2.17%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |                     |          
+               |                      --0.64%--std::istream::sentry::sentry
+               |          
+               |--2.57%--fRead
+               |          std::istream::_M_extract<unsigned long>
+               |          |          
+               |           --2.03%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |          
+                --0.71%--std::ostream::_M_insert<unsigned long>@plt
+
+    35.32%     0.00%  main     libc.so.6              [.] __libc_start_main
+            |
+            ---__libc_start_main
+               0xffff9a9eb000
+               main
+               |          
+               |--22.14%--poly_multiply_crt_openmp_modparallel
+               |          |          
+               |           --22.14%--GOMP_parallel
+               |                     |          
+               |                     |--20.15%--poly_multiply_crt_openmp_modparallel
+               |                     |          |          
+               |                     |           --20.15%--multiply_mod_ntt
+               |                     |                     |          
+               |                     |                     |--10.82%--ntt_serial
+               |                     |                     |          
+               |                     |                      --9.33%--ntt_serial
+               |                     |          
+               |                     |--1.00%--__umodti3
+               |                     |          
+               |                      --0.98%--poly_multiply_crt_openmp_modparallel
+               |          
+               |--6.57%--fWrite
+               |          |          
+               |          |--4.87%--std::ostream::_M_insert<unsigned long>
+               |          |          |          
+               |          |          |--2.38%--0xffff9adde578
+               |          |          |          
+               |          |           --1.63%--std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               |          |                     |          
+               |          |                     |--0.87%--std::basic_streambuf<char, std::char_traits<char> >::xsputn
+               |          |                     |          
+               |          |                      --0.76%--std::codecvt<char, char, __mbstate_t>::do_always_noconv
+               |          |          
+               |           --1.70%--std::__ostream_insert<char, std::char_traits<char> >
+               |                     |          
+               |                      --0.88%--std::ostream::sentry::sentry
+               |          
+               |--3.34%--fCheck
+               |          |          
+               |           --3.18%--std::istream::_M_extract<unsigned long>
+               |                     |          
+               |                     |--2.17%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |                     |          
+               |                      --0.64%--std::istream::sentry::sentry
+               |          
+               |--2.57%--fRead
+               |          std::istream::_M_extract<unsigned long>
+               |          |          
+               |           --2.03%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |          
+                --0.71%--std::ostream::_M_insert<unsigned long>@plt
+
+    35.32%     0.00%  main     libc.so.6              [.] 0x0000ffff9a9eb000
+            |
+            ---0xffff9a9eb000
+               main
+               |          
+               |--22.14%--poly_multiply_crt_openmp_modparallel
+               |          |          
+               |           --22.14%--GOMP_parallel
+               |                     |          
+               |                     |--20.15%--poly_multiply_crt_openmp_modparallel
+               |                     |          |          
+               |                     |           --20.15%--multiply_mod_ntt
+               |                     |                     |          
+               |                     |                     |--10.82%--ntt_serial
+               |                     |                     |          
+               |                     |                      --9.33%--ntt_serial
+               |                     |          
+               |                     |--1.00%--__umodti3
+               |                     |          
+               |                      --0.98%--poly_multiply_crt_openmp_modparallel
+               |          
+               |--6.57%--fWrite
+               |          |          
+               |          |--4.87%--std::ostream::_M_insert<unsigned long>
+               |          |          |          
+               |          |          |--2.38%--0xffff9adde578
+               |          |          |          
+               |          |           --1.63%--std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               |          |                     |          
+               |          |                     |--0.87%--std::basic_streambuf<char, std::char_traits<char> >::xsputn
+               |          |                     |          
+               |          |                      --0.76%--std::codecvt<char, char, __mbstate_t>::do_always_noconv
+               |          |          
+               |           --1.70%--std::__ostream_insert<char, std::char_traits<char> >
+               |                     |          
+               |                      --0.88%--std::ostream::sentry::sentry
+               |          
+               |--3.34%--fCheck
+               |          |          
+               |           --3.18%--std::istream::_M_extract<unsigned long>
+               |                     |          
+               |                     |--2.17%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |                     |          
+               |                      --0.64%--std::istream::sentry::sentry
+               |          
+               |--2.57%--fRead
+               |          std::istream::_M_extract<unsigned long>
+               |          |          
+               |           --2.03%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |          
+                --0.71%--std::ostream::_M_insert<unsigned long>@plt
+
+    35.32%     0.00%  main     main                   [.] main
+            |
+            ---main
+               |          
+               |--22.14%--poly_multiply_crt_openmp_modparallel
+               |          |          
+               |           --22.14%--GOMP_parallel
+               |                     |          
+               |                     |--20.15%--poly_multiply_crt_openmp_modparallel
+               |                     |          |          
+               |                     |           --20.15%--multiply_mod_ntt
+               |                     |                     |          
+               |                     |                     |--10.82%--ntt_serial
+               |                     |                     |          
+               |                     |                      --9.33%--ntt_serial
+               |                     |          
+               |                     |--1.00%--__umodti3
+               |                     |          
+               |                      --0.98%--poly_multiply_crt_openmp_modparallel
+               |          
+               |--6.57%--fWrite
+               |          |          
+               |          |--4.87%--std::ostream::_M_insert<unsigned long>
+               |          |          |          
+               |          |          |--2.38%--0xffff9adde578
+               |          |          |          
+               |          |           --1.63%--std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               |          |                     |          
+               |          |                     |--0.87%--std::basic_streambuf<char, std::char_traits<char> >::xsputn
+               |          |                     |          
+               |          |                      --0.76%--std::codecvt<char, char, __mbstate_t>::do_always_noconv
+               |          |          
+               |           --1.70%--std::__ostream_insert<char, std::char_traits<char> >
+               |                     |          
+               |                      --0.88%--std::ostream::sentry::sentry
+               |          
+               |--3.34%--fCheck
+               |          |          
+               |           --3.18%--std::istream::_M_extract<unsigned long>
+               |                     |          
+               |                     |--2.17%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |                     |          
+               |                      --0.64%--std::istream::sentry::sentry
+               |          
+               |--2.57%--fRead
+               |          std::istream::_M_extract<unsigned long>
+               |          |          
+               |           --2.03%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |          
+                --0.71%--std::ostream::_M_insert<unsigned long>@plt
+
+    22.14%     0.00%  main     main                   [.] poly_multiply_crt_openmp_modparallel
+            |
+            ---poly_multiply_crt_openmp_modparallel
+               |          
+                --22.14%--GOMP_parallel
+                          |          
+                          |--20.15%--poly_multiply_crt_openmp_modparallel
+                          |          |          
+                          |           --20.15%--multiply_mod_ntt
+                          |                     |          
+                          |                     |--10.82%--ntt_serial
+                          |                     |          
+                          |                      --9.33%--ntt_serial
+                          |          
+                          |--1.00%--__umodti3
+                          |          
+                           --0.98%--poly_multiply_crt_openmp_modparallel
+
+    22.14%     0.00%  main     libgomp.so.1.0.0       [.] GOMP_parallel
+            |
+            ---GOMP_parallel
+               |          
+               |--20.15%--poly_multiply_crt_openmp_modparallel
+               |          |          
+               |           --20.15%--multiply_mod_ntt
+               |                     |          
+               |                     |--10.82%--ntt_serial
+               |                     |          
+               |                      --9.33%--ntt_serial
+               |          
+               |--1.00%--__umodti3
+               |          
+                --0.98%--poly_multiply_crt_openmp_modparallel
+
+     6.57%     0.00%  main     main                   [.] fWrite
+            |
+            ---fWrite
+               |          
+               |--4.87%--std::ostream::_M_insert<unsigned long>
+               |          |          
+               |          |--2.38%--0xffff9adde578
+               |          |          
+               |           --1.63%--std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               |                     |          
+               |                     |--0.87%--std::basic_streambuf<char, std::char_traits<char> >::xsputn
+               |                     |          
+               |                      --0.76%--std::codecvt<char, char, __mbstate_t>::do_always_noconv
+               |          
+                --1.70%--std::__ostream_insert<char, std::char_traits<char> >
+                          |          
+                           --0.88%--std::ostream::sentry::sentry
+
+     5.74%     0.91%  main     libstdc++.so.6.0.28    [.] std::istream::_M_extract<unsigned long>
+            |          
+            |--4.84%--std::istream::_M_extract<unsigned long>
+            |          |          
+            |          |--4.19%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+            |          |          
+            |           --0.64%--std::istream::sentry::sentry
+            |          
+             --0.91%--_start
+                       __libc_start_main
+                       0xffff9a9eb000
+                       main
+                       |          
+                        --0.54%--fRead
+                                  std::istream::_M_extract<unsigned long>
+
+     4.87%     0.86%  main     libstdc++.so.6.0.28    [.] std::ostream::_M_insert<unsigned long>
+            |          
+            |--4.00%--std::ostream::_M_insert<unsigned long>
+            |          |          
+            |          |--2.38%--0xffff9adde578
+            |          |          
+            |           --1.63%--std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+            |                     |          
+            |                     |--0.87%--std::basic_streambuf<char, std::char_traits<char> >::xsputn
+            |                     |          
+            |                      --0.76%--std::codecvt<char, char, __mbstate_t>::do_always_noconv
+            |          
+             --0.86%--_start
+                       __libc_start_main
+                       0xffff9a9eb000
+                       main
+                       fWrite
+                       std::ostream::_M_insert<unsigned long>
+
+     4.20%     4.19%  main     libstdc++.so.6.0.28    [.] std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+            |          
+             --4.19%--_start
+                       __libc_start_main
+                       0xffff9a9eb000
+                       main
+                       |          
+                       |--2.17%--fCheck
+                       |          |          
+                       |           --2.17%--std::istream::_M_extract<unsigned long>
+                       |                     std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+                       |          
+                        --2.02%--fRead
+                                  std::istream::_M_extract<unsigned long>
+                                  std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+     3.34%     0.16%  main     main                   [.] fCheck
+            |          
+             --3.18%--fCheck
+                       |          
+                        --3.18%--std::istream::_M_extract<unsigned long>
+                                  |          
+                                  |--2.17%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+                                  |          
+                                   --0.64%--std::istream::sentry::sentry
+
+     3.15%     3.15%  main     libgcc_s-10.3.1.so.1   [.] __umodti3
+            |          
+            |--2.15%--0xffff9aaa9d5c
+            |          0xffff9aa42518
+            |          0xffff9abc97e0
+            |          __umodti3
+            |          
+             --1.00%--_start
+                       __libc_start_main
+                       0xffff9a9eb000
+                       main
+                       poly_multiply_crt_openmp_modparallel
+                       GOMP_parallel
+                       __umodti3
+
+     2.57%     0.00%  main     main                   [.] fRead
+            |
+            ---fRead
+               std::istream::_M_extract<unsigned long>
+               |          
+                --2.03%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+     2.38%     2.38%  main     libstdc++.so.6.0.28    [.] 0x000000000011e578
+            |
+            ---_start
+               __libc_start_main
+               0xffff9a9eb000
+               main
+               fWrite
+               std::ostream::_M_insert<unsigned long>
+               0xffff9adde578
+
+     2.38%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffff9adde578
+            |
+            ---0xffff9adde578
+
+     1.91%     1.91%  main     main                   [.] poly_multiply_crt_openmp_modparallel
+            |          
+            |--0.98%--_start
+            |          __libc_start_main
+            |          0xffff9a9eb000
+            |          main
+            |          poly_multiply_crt_openmp_modparallel
+            |          GOMP_parallel
+            |          poly_multiply_crt_openmp_modparallel
+            |          
+             --0.93%--0xffff9aaa9d5c
+                       0xffff9aa42518
+                       0xffff9abc97e0
+                       poly_multiply_crt_openmp_modparallel
+
+     1.70%     0.82%  main     libstdc++.so.6.0.28    [.] std::__ostream_insert<char, std::char_traits<char> >
+            |          
+            |--0.88%--std::__ostream_insert<char, std::char_traits<char> >
+            |          std::ostream::sentry::sentry
+            |          
+             --0.82%--_start
+                       __libc_start_main
+                       0xffff9a9eb000
+                       main
+                       fWrite
+                       std::__ostream_insert<char, std::char_traits<char> >
+
+     1.63%     0.00%  main     libstdc++.so.6.0.28    [.] std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+            |
+            ---std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               |          
+               |--0.87%--std::basic_streambuf<char, std::char_traits<char> >::xsputn
+               |          
+                --0.76%--std::codecvt<char, char, __mbstate_t>::do_always_noconv
+
+     0.88%     0.88%  main     libstdc++.so.6.0.28    [.] std::ostream::sentry::sentry
+            |
+            ---_start
+               __libc_start_main
+               0xffff9a9eb000
+               main
+               fWrite
+               std::__ostream_insert<char, std::char_traits<char> >
+               std::ostream::sentry::sentry
+
+     0.87%     0.87%  main     libstdc++.so.6.0.28    [.] std::basic_streambuf<char, std::char_traits<char> >::xsputn
+            |
+            ---_start
+               __libc_start_main
+               0xffff9a9eb000
+               main
+               fWrite
+               std::ostream::_M_insert<unsigned long>
+               std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               std::basic_streambuf<char, std::char_traits<char> >::xsputn
+
+     0.76%     0.76%  main     libstdc++.so.6.0.28    [.] std::codecvt<char, char, __mbstate_t>::do_always_noconv
+            |
+            ---_start
+               __libc_start_main
+               0xffff9a9eb000
+               main
+               fWrite
+               std::ostream::_M_insert<unsigned long>
+               std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               std::codecvt<char, char, __mbstate_t>::do_always_noconv
+
+     0.71%     0.71%  main     main                   [.] std::ostream::_M_insert<unsigned long>@plt
+            |
+            ---_start
+               __libc_start_main
+               0xffff9a9eb000
+               main
+               std::ostream::_M_insert<unsigned long>@plt
+
+     0.64%     0.64%  main     libstdc++.so.6.0.28    [.] std::istream::sentry::sentry
+            |
+            ---_start
+               __libc_start_main
+               0xffff9a9eb000
+               main
+               fCheck
+               std::istream::_M_extract<unsigned long>
+               std::istream::sentry::sentry
+
+     0.01%     0.00%  main     libc.so.6              [.] 0x0000ffff9aa5dd68
+     0.01%     0.01%  main     [unknown]              [k] 0xffffcb7c9deebf80
+     0.01%     0.00%  main     [unknown]              [.] 0xffffcb7c9d0f2560
+     0.01%     0.00%  main     [unknown]              [.] 0xffffcb7c9deec868
+     0.01%     0.01%  main     libstdc++.so.6.0.28    [.] 0x000000000011ff74
+     0.01%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffff9addff74
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffff9abc97c4
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x000000000001c21c
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffff9abcc21c
+     0.00%     0.00%  main     libc.so.6              [.] 0x000000000009dd58
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffff9aa5dd58
+     0.00%     0.00%  main     libstdc++.so.6.0.28    [.] operator new
+     0.00%     0.00%  main     libc.so.6              [.] malloc
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffff9aa517b8
+     0.00%     0.00%  main     libc.so.6              [.] 0x000000000008f3e0
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffff9aa4f3e0
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x00000000000197bc
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffff9abc97bc
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffff9aa4f31c
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x000000000001c514
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffff9abc97e8
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffff9abcc514
+     0.00%     0.00%  main     libc.so.6              [.] 0x000000000008ef80
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffff9aa4ef80
+     0.00%     0.00%  main     libc.so.6              [.] __mmap
+     0.00%     0.00%  main     libc.so.6              [.] 0x000000000009dd68
+     0.00%     0.00%  main     libc.so.6              [.] __clone
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffff9abc9c64
+     0.00%     0.00%  main     libc.so.6              [.] pthread_create
+     0.00%     0.00%  main     libc.so.6              [.] 0x000000000009dd60
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffff9aa5dd60
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffff9abc97b8
+     0.00%     0.00%  main     libc.so.6              [.] syscall
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x000000000001c264
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffff9abcc264
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffff9aa51598
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffff9aa503b4
+     0.00%     0.00%  main     libc.so.6              [.] 0x000000000009dd34
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffff9aa5dd34
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffff9abca9f4
+     0.00%     0.00%  main     ld-linux-aarch64.so.1  [.] 0x000000000001cdc0
+     0.00%     0.00%  main     ld-linux-aarch64.so.1  [.] 0x0000ffff9aed9dc0
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x000000000001c4f8
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffff9abcc4f8
+
+
+#
+# (Tip: Skip collecting build-id when recording: perf record -B)
+#

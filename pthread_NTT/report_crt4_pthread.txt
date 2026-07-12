@@ -1,0 +1,508 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 415  of event 'cycles:u'
+# Event count (approx.): 1915036986
+#
+# Children      Self  Command  Shared Object          Symbol                                                                                                         
+# ........  ........  .......  .....................  ...............................................................................................................
+#
+    89.69%     1.25%  main     main                   [.] multiply_mod_ntt
+            |          
+            |--88.44%--multiply_mod_ntt
+            |          |          
+            |          |--36.73%--__umodti3
+            |          |          
+            |          |--24.40%--ntt_serial
+            |          |          
+            |          |--15.29%--ntt_serial
+            |          |          
+            |           --12.03%--__umodti3@plt
+            |          
+             --0.98%--0xffffb6649d5c
+                       0xffffb65e2518
+                       mod_worker
+                       multiply_mod_ntt
+
+    66.11%     0.00%  main     libc.so.6              [.] 0x0000ffffb6649d5c
+            |
+            ---0xffffb6649d5c
+               0xffffb65e2518
+               |          
+               |--65.11%--mod_worker
+               |          |          
+               |          |--64.20%--multiply_mod_ntt
+               |          |          |          
+               |          |          |--26.05%--__umodti3
+               |          |          |          
+               |          |          |--18.61%--ntt_serial
+               |          |          |          
+               |          |          |--10.84%--ntt_serial
+               |          |          |          
+               |          |           --7.72%--__umodti3@plt
+               |          |          
+               |           --0.91%--__umodti3
+               |          
+                --1.00%--combine_worker
+                          |          
+                           --1.00%--__umodti3
+
+    66.11%     0.00%  main     libc.so.6              [.] 0x0000ffffb65e2518
+            |
+            ---0xffffb65e2518
+               |          
+               |--65.11%--mod_worker
+               |          |          
+               |          |--64.20%--multiply_mod_ntt
+               |          |          |          
+               |          |          |--26.05%--__umodti3
+               |          |          |          
+               |          |          |--18.61%--ntt_serial
+               |          |          |          
+               |          |          |--10.84%--ntt_serial
+               |          |          |          
+               |          |           --7.72%--__umodti3@plt
+               |          |          
+               |           --0.91%--__umodti3
+               |          
+                --1.00%--combine_worker
+                          |          
+                           --1.00%--__umodti3
+
+    65.11%     0.00%  main     main                   [.] mod_worker
+            |
+            ---mod_worker
+               |          
+               |--64.20%--multiply_mod_ntt
+               |          |          
+               |          |--26.05%--__umodti3
+               |          |          
+               |          |--18.61%--ntt_serial
+               |          |          
+               |          |--10.84%--ntt_serial
+               |          |          
+               |           --7.72%--__umodti3@plt
+               |          
+                --0.91%--__umodti3
+
+    38.98%    38.98%  main     libgcc_s-10.3.1.so.1   [.] __umodti3
+            |          
+            |--27.96%--0xffffb6649d5c
+            |          0xffffb65e2518
+            |          |          
+            |          |--26.96%--mod_worker
+            |          |          |          
+            |          |          |--26.05%--multiply_mod_ntt
+            |          |          |          __umodti3
+            |          |          |          
+            |          |           --0.91%--__umodti3
+            |          |          
+            |           --1.00%--combine_worker
+            |                     __umodti3
+            |          
+             --11.02%--_start
+                       __libc_start_main
+                       0xffffb658b000
+                       main
+                       poly_multiply_crt_pthread
+                       |          
+                        --10.68%--multiply_mod_ntt
+                                  __umodti3
+
+    33.89%     0.00%  main     main                   [.] _start
+            |
+            ---_start
+               __libc_start_main
+               0xffffb658b000
+               main
+               |          
+               |--26.36%--poly_multiply_crt_pthread
+               |          |          
+               |          |--25.49%--multiply_mod_ntt
+               |          |          |          
+               |          |          |--10.68%--__umodti3
+               |          |          |          
+               |          |          |--5.78%--ntt_serial
+               |          |          |          
+               |          |          |--4.44%--ntt_serial
+               |          |          |          
+               |          |           --4.31%--__umodti3@plt
+               |          |          
+               |           --0.53%--combine_crt_pthread
+               |                     |          
+               |                      --0.53%--run_combine_worker
+               |          
+               |--3.68%--fWrite
+               |          |          
+               |          |--2.45%--std::ostream::_M_insert<unsigned long>
+               |          |          |          
+               |          |          |--1.21%--std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               |          |          |          
+               |          |           --0.82%--0xffffb691e578
+               |          |          
+               |           --1.23%--std::__ostream_insert<char, std::char_traits<char> >
+               |          
+               |--2.27%--fCheck
+               |          |          
+               |           --2.27%--std::istream::_M_extract<unsigned long>
+               |                     |          
+               |                      --2.06%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |          
+                --1.17%--fRead
+                          |          
+                           --1.06%--std::istream::_M_extract<unsigned long>
+                                     |          
+                                      --0.89%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+    33.89%     0.00%  main     libc.so.6              [.] __libc_start_main
+            |
+            ---__libc_start_main
+               0xffffb658b000
+               main
+               |          
+               |--26.36%--poly_multiply_crt_pthread
+               |          |          
+               |          |--25.49%--multiply_mod_ntt
+               |          |          |          
+               |          |          |--10.68%--__umodti3
+               |          |          |          
+               |          |          |--5.78%--ntt_serial
+               |          |          |          
+               |          |          |--4.44%--ntt_serial
+               |          |          |          
+               |          |           --4.31%--__umodti3@plt
+               |          |          
+               |           --0.53%--combine_crt_pthread
+               |                     |          
+               |                      --0.53%--run_combine_worker
+               |          
+               |--3.68%--fWrite
+               |          |          
+               |          |--2.45%--std::ostream::_M_insert<unsigned long>
+               |          |          |          
+               |          |          |--1.21%--std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               |          |          |          
+               |          |           --0.82%--0xffffb691e578
+               |          |          
+               |           --1.23%--std::__ostream_insert<char, std::char_traits<char> >
+               |          
+               |--2.27%--fCheck
+               |          |          
+               |           --2.27%--std::istream::_M_extract<unsigned long>
+               |                     |          
+               |                      --2.06%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |          
+                --1.17%--fRead
+                          |          
+                           --1.06%--std::istream::_M_extract<unsigned long>
+                                     |          
+                                      --0.89%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+    33.89%     0.00%  main     libc.so.6              [.] 0x0000ffffb658b000
+            |
+            ---0xffffb658b000
+               main
+               |          
+               |--26.36%--poly_multiply_crt_pthread
+               |          |          
+               |          |--25.49%--multiply_mod_ntt
+               |          |          |          
+               |          |          |--10.68%--__umodti3
+               |          |          |          
+               |          |          |--5.78%--ntt_serial
+               |          |          |          
+               |          |          |--4.44%--ntt_serial
+               |          |          |          
+               |          |           --4.31%--__umodti3@plt
+               |          |          
+               |           --0.53%--combine_crt_pthread
+               |                     |          
+               |                      --0.53%--run_combine_worker
+               |          
+               |--3.68%--fWrite
+               |          |          
+               |          |--2.45%--std::ostream::_M_insert<unsigned long>
+               |          |          |          
+               |          |          |--1.21%--std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               |          |          |          
+               |          |           --0.82%--0xffffb691e578
+               |          |          
+               |           --1.23%--std::__ostream_insert<char, std::char_traits<char> >
+               |          
+               |--2.27%--fCheck
+               |          |          
+               |           --2.27%--std::istream::_M_extract<unsigned long>
+               |                     |          
+               |                      --2.06%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |          
+                --1.17%--fRead
+                          |          
+                           --1.06%--std::istream::_M_extract<unsigned long>
+                                     |          
+                                      --0.89%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+    33.89%     0.00%  main     main                   [.] main
+            |
+            ---main
+               |          
+               |--26.36%--poly_multiply_crt_pthread
+               |          |          
+               |          |--25.49%--multiply_mod_ntt
+               |          |          |          
+               |          |          |--10.68%--__umodti3
+               |          |          |          
+               |          |          |--5.78%--ntt_serial
+               |          |          |          
+               |          |          |--4.44%--ntt_serial
+               |          |          |          
+               |          |           --4.31%--__umodti3@plt
+               |          |          
+               |           --0.53%--combine_crt_pthread
+               |                     |          
+               |                      --0.53%--run_combine_worker
+               |          
+               |--3.68%--fWrite
+               |          |          
+               |          |--2.45%--std::ostream::_M_insert<unsigned long>
+               |          |          |          
+               |          |          |--1.21%--std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               |          |          |          
+               |          |           --0.82%--0xffffb691e578
+               |          |          
+               |           --1.23%--std::__ostream_insert<char, std::char_traits<char> >
+               |          
+               |--2.27%--fCheck
+               |          |          
+               |           --2.27%--std::istream::_M_extract<unsigned long>
+               |                     |          
+               |                      --2.06%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |          
+                --1.17%--fRead
+                          |          
+                           --1.06%--std::istream::_M_extract<unsigned long>
+                                     |          
+                                      --0.89%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+    26.36%     0.00%  main     main                   [.] poly_multiply_crt_pthread
+            |
+            ---poly_multiply_crt_pthread
+               |          
+               |--25.49%--multiply_mod_ntt
+               |          |          
+               |          |--10.68%--__umodti3
+               |          |          
+               |          |--5.78%--ntt_serial
+               |          |          
+               |          |--4.44%--ntt_serial
+               |          |          
+               |           --4.31%--__umodti3@plt
+               |          
+                --0.53%--combine_crt_pthread
+                          |          
+                           --0.53%--run_combine_worker
+
+    24.40%    24.40%  main     main                   [.] ntt_serial
+            |          
+            |--18.61%--0xffffb6649d5c
+            |          0xffffb65e2518
+            |          mod_worker
+            |          multiply_mod_ntt
+            |          ntt_serial
+            |          
+             --5.78%--_start
+                       __libc_start_main
+                       0xffffb658b000
+                       main
+                       poly_multiply_crt_pthread
+                       multiply_mod_ntt
+                       ntt_serial
+
+    15.29%    15.29%  main     main                   [.] ntt_serial
+            |          
+            |--10.84%--0xffffb6649d5c
+            |          0xffffb65e2518
+            |          mod_worker
+            |          multiply_mod_ntt
+            |          ntt_serial
+            |          
+             --4.44%--_start
+                       __libc_start_main
+                       0xffffb658b000
+                       main
+                       poly_multiply_crt_pthread
+                       multiply_mod_ntt
+                       ntt_serial
+
+    12.03%    12.03%  main     main                   [.] __umodti3@plt
+            |          
+            |--7.72%--0xffffb6649d5c
+            |          0xffffb65e2518
+            |          mod_worker
+            |          multiply_mod_ntt
+            |          __umodti3@plt
+            |          
+             --4.31%--_start
+                       __libc_start_main
+                       0xffffb658b000
+                       main
+                       poly_multiply_crt_pthread
+                       multiply_mod_ntt
+                       __umodti3@plt
+
+     3.68%     0.00%  main     main                   [.] fWrite
+            |
+            ---fWrite
+               |          
+               |--2.45%--std::ostream::_M_insert<unsigned long>
+               |          |          
+               |          |--1.21%--std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               |          |          
+               |           --0.82%--0xffffb691e578
+               |          
+                --1.23%--std::__ostream_insert<char, std::char_traits<char> >
+
+     3.32%     0.35%  main     libstdc++.so.6.0.28    [.] std::istream::_M_extract<unsigned long>
+            |          
+             --2.97%--std::istream::_M_extract<unsigned long>
+                       |          
+                        --2.95%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+     2.95%     2.34%  main     libstdc++.so.6.0.28    [.] std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+            |          
+            |--2.34%--_start
+            |          __libc_start_main
+            |          0xffffb658b000
+            |          main
+            |          |          
+            |          |--1.45%--fCheck
+            |          |          std::istream::_M_extract<unsigned long>
+            |          |          std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+            |          |          
+            |           --0.89%--fRead
+            |                     std::istream::_M_extract<unsigned long>
+            |                     std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+            |          
+             --0.60%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+     2.45%     0.00%  main     libstdc++.so.6.0.28    [.] std::ostream::_M_insert<unsigned long>
+            |
+            ---std::ostream::_M_insert<unsigned long>
+               |          
+               |--1.21%--std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+               |          
+                --0.82%--0xffffb691e578
+
+     2.27%     0.00%  main     main                   [.] fCheck
+            |          
+             --2.27%--fCheck
+                       |          
+                        --2.27%--std::istream::_M_extract<unsigned long>
+                                  |          
+                                   --2.06%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+     1.23%     0.39%  main     libstdc++.so.6.0.28    [.] std::__ostream_insert<char, std::char_traits<char> >
+            |          
+             --0.84%--std::__ostream_insert<char, std::char_traits<char> >
+
+     1.21%     0.80%  main     libstdc++.so.6.0.28    [.] std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+            |          
+             --0.80%--_start
+                       __libc_start_main
+                       0xffffb658b000
+                       main
+                       fWrite
+                       std::ostream::_M_insert<unsigned long>
+                       std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+
+     1.17%     0.00%  main     main                   [.] fRead
+            |
+            ---fRead
+               |          
+                --1.06%--std::istream::_M_extract<unsigned long>
+                          |          
+                           --0.89%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+     1.00%     0.00%  main     main                   [.] combine_worker
+            |
+            ---combine_worker
+               |          
+                --1.00%--__umodti3
+
+     0.82%     0.82%  main     libstdc++.so.6.0.28    [.] 0x000000000011e578
+            |
+            ---_start
+               __libc_start_main
+               0xffffb658b000
+               main
+               fWrite
+               std::ostream::_M_insert<unsigned long>
+               0xffffb691e578
+
+     0.82%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffffb691e578
+            |
+            ---0xffffb691e578
+
+     0.53%     0.53%  main     main                   [.] run_combine_worker
+            |          
+             --0.53%--_start
+                       __libc_start_main
+                       0xffffb658b000
+                       main
+                       poly_multiply_crt_pthread
+                       combine_crt_pthread
+                       run_combine_worker
+
+     0.53%     0.00%  main     main                   [.] combine_crt_pthread
+            |
+            ---combine_crt_pthread
+               |          
+                --0.53%--run_combine_worker
+
+     0.42%     0.42%  main     libstdc++.so.6.0.28    [.] std::basic_streambuf<char, std::char_traits<char> >::xsputn
+     0.42%     0.42%  main     libstdc++.so.6.0.28    [.] std::ostream::sentry::sentry
+     0.42%     0.42%  main     libstdc++.so.6.0.28    [.] std::basic_filebuf<char, std::char_traits<char> >::xsputn
+     0.42%     0.42%  main     main                   [.] std::ostream::_M_insert<unsigned long>@plt
+     0.41%     0.41%  main     libstdc++.so.6.0.28    [.] 0x000000000011e574
+     0.41%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffffb691e574
+     0.37%     0.37%  main     libstdc++.so.6.0.28    [.] 0x000000000012290c
+     0.37%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffffb692290c
+     0.23%     0.23%  main     libstdc++.so.6.0.28    [.] 0x0000000000122908
+     0.23%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffffb6922908
+     0.14%     0.14%  main     libstdc++.so.6.0.28    [.] std::istream::sentry::sentry
+     0.00%     0.00%  main     main                   [.] std::istream::_M_extract<unsigned long>@plt
+     0.00%     0.00%  main     libstdc++.so.6.0.28    [.] std::istream::sentry::sentry@plt
+     0.00%     0.00%  main     libstdc++.so.6.0.28    [.] std::basic_filebuf<char, std::char_traits<char> >::underflow
+     0.00%     0.00%  main     libstdc++.so.6.0.28    [.] std::__basic_file<char>::xsgetn
+     0.00%     0.00%  main     libc.so.6              [.] 0x000000000007e930
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffffb65de930
+     0.00%     0.00%  main     libc.so.6              [.] __clone
+     0.00%     0.00%  main     libc.so.6              [.] pthread_create
+     0.00%     0.00%  main     [unknown]              [.] 0x0000000027eaab4b
+     0.00%     0.00%  main     [unknown]              [.] 0000000000000000
+     0.00%     0.00%  main     [unknown]              [.] 0xffff5cdd31512000
+     0.00%     0.00%  main     libc.so.6              [.] 0x000000000007ed24
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffffb65e3d7c
+     0.00%     0.00%  main     ld-linux-aarch64.so.1  [.] 0x000000000001cdc0
+     0.00%     0.00%  main     ld-linux-aarch64.so.1  [.] 0x0000ffffb6a21dc0
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffffb65ded24
+     0.00%     0.00%  main     [unknown]              [.] 0x0000000000000072
+     0.00%     0.00%  main     [unknown]              [.] 0x0000000000200000
+     0.00%     0.00%  main     libc.so.6              [.] read
+     0.00%     0.00%  main     libc.so.6              [.] 0x00000000000e9d50
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000000000082234
+     0.00%     0.00%  main     [unknown]              [k] 0xffffcb7c9d0f0734
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffffb65e2234
+     0.00%     0.00%  main     libc.so.6              [.] 0x0000ffffb6649d50
+     0.00%     0.00%  main     [unknown]              [.] 0xffffcb7c9d0f2b68
+     0.00%     0.00%  main     [unknown]              [.] 0xffffcb7c9d0f014c
+     0.00%     0.00%  main     [unknown]              [.] 0xffffcb7c9d256190
+     0.00%     0.00%  main     [unknown]              [.] 0xffffcb7c9d1a7ba4
+     0.00%     0.00%  main     [unknown]              [.] 0x0000000000810000
+     0.00%     0.00%  main     [unknown]              [.] 0x00000000287594b0
+
+
+#
+# (Tip: Save output of perf stat using: perf stat record <target workload>)
+#

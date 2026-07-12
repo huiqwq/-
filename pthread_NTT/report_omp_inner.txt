@@ -1,0 +1,829 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 669  of event 'cycles:u'
+# Event count (approx.): 1962797408
+#
+# Children      Self  Command  Shared Object          Symbol                                                                                                         
+# ........  ........  .......  .....................  ...............................................................................................................
+#
+    65.36%     0.00%  main     libc.so.6              [.] 0x0000ffffbc439d5c
+            |
+            ---0xffffbc439d5c
+               0xffffbc3d2518
+               |          
+               |--55.63%--0xffffbc5597e0
+               |          |          
+               |          |--21.76%--__umodti3
+               |          |          
+               |          |--19.62%--ntt_openmp
+               |          |          
+               |          |--7.51%--__umodti3@plt
+               |          |          
+               |          |--5.36%--ntt_openmp
+               |          |          
+               |           --1.02%--multiply_mod_ntt
+               |          
+               |--5.93%--0xffffbc5597e8
+               |          |          
+               |          |--4.32%--0xffffbc55c4ec
+               |          |          
+               |           --1.61%--0xffffbc55c4e0
+               |          
+                --3.79%--0xffffbc5597c4
+                          |          
+                          |--2.00%--0xffffbc55c21c
+                          |          
+                           --1.29%--0xffffbc55c210
+
+    65.36%     0.00%  main     libc.so.6              [.] 0x0000ffffbc3d2518
+            |
+            ---0xffffbc3d2518
+               |          
+               |--55.63%--0xffffbc5597e0
+               |          |          
+               |          |--21.76%--__umodti3
+               |          |          
+               |          |--19.62%--ntt_openmp
+               |          |          
+               |          |--7.51%--__umodti3@plt
+               |          |          
+               |          |--5.36%--ntt_openmp
+               |          |          
+               |           --1.02%--multiply_mod_ntt
+               |          
+               |--5.93%--0xffffbc5597e8
+               |          |          
+               |          |--4.32%--0xffffbc55c4ec
+               |          |          
+               |           --1.61%--0xffffbc55c4e0
+               |          
+                --3.79%--0xffffbc5597c4
+                          |          
+                          |--2.00%--0xffffbc55c21c
+                          |          
+                           --1.29%--0xffffbc55c210
+
+    55.63%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc5597e0
+            |
+            ---0xffffbc5597e0
+               |          
+               |--21.76%--__umodti3
+               |          
+               |--19.62%--ntt_openmp
+               |          
+               |--7.51%--__umodti3@plt
+               |          
+               |--5.36%--ntt_openmp
+               |          
+                --1.02%--multiply_mod_ntt
+
+    34.64%     0.00%  main     main                   [.] _start
+            |
+            ---_start
+               __libc_start_main
+               0xffffbc37b000
+               |          
+                --34.42%--main
+                          |          
+                          |--25.11%--poly_multiply_crt_openmp
+                          |          |          
+                          |          |--24.20%--multiply_mod_ntt
+                          |          |          |          
+                          |          |          |--13.42%--ntt_openmp
+                          |          |          |          |          
+                          |          |          |           --11.13%--GOMP_parallel
+                          |          |          |                     |          
+                          |          |          |                     |--4.31%--ntt_openmp
+                          |          |          |                     |          
+                          |          |          |                     |--3.41%--__umodti3
+                          |          |          |                     |          
+                          |          |          |                     |--1.63%--__umodti3@plt
+                          |          |          |                     |          
+                          |          |          |                     |--0.95%--ntt_openmp
+                          |          |          |                     |          
+                          |          |          |                      --0.82%--0xffffbc55a1b0
+                          |          |          |          
+                          |          |           --9.45%--ntt_openmp
+                          |          |                     |          
+                          |          |                     |--8.05%--GOMP_parallel
+                          |          |                     |          |          
+                          |          |                     |          |--3.03%--__umodti3
+                          |          |                     |          |          
+                          |          |                     |          |--2.19%--ntt_openmp
+                          |          |                     |          |          
+                          |          |                     |          |--1.51%--0xffffbc55a1b0
+                          |          |                     |          |          |          
+                          |          |                     |          |          |--0.83%--0xffffbc55c210
+                          |          |                     |          |          |          
+                          |          |                     |          |           --0.68%--0xffffbc55c21c
+                          |          |                     |          |          
+                          |          |                     |          |--0.77%--ntt_openmp
+                          |          |                     |          |          
+                          |          |                     |           --0.56%--__umodti3@plt
+                          |          |                     |          
+                          |          |                      --0.90%--0xffffbc55a9f4
+                          |          |          
+                          |           --0.91%--GOMP_parallel
+                          |                     __umodti3
+                          |          
+                          |--4.46%--fCheck
+                          |          |          
+                          |           --4.05%--std::istream::_M_extract<unsigned long>
+                          |                     |          
+                          |                      --3.57%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+                          |          
+                          |--3.91%--fWrite
+                          |          |          
+                          |           --3.48%--std::ostream::_M_insert<unsigned long>
+                          |                     |          
+                          |                      --2.17%--0xffffbc76e578
+                          |          
+                           --0.95%--fRead
+                                     std::istream::_M_extract<unsigned long>
+                                     |          
+                                      --0.92%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+    34.64%     0.00%  main     libc.so.6              [.] __libc_start_main
+            |
+            ---__libc_start_main
+               0xffffbc37b000
+               |          
+                --34.42%--main
+                          |          
+                          |--25.11%--poly_multiply_crt_openmp
+                          |          |          
+                          |          |--24.20%--multiply_mod_ntt
+                          |          |          |          
+                          |          |          |--13.42%--ntt_openmp
+                          |          |          |          |          
+                          |          |          |           --11.13%--GOMP_parallel
+                          |          |          |                     |          
+                          |          |          |                     |--4.31%--ntt_openmp
+                          |          |          |                     |          
+                          |          |          |                     |--3.41%--__umodti3
+                          |          |          |                     |          
+                          |          |          |                     |--1.63%--__umodti3@plt
+                          |          |          |                     |          
+                          |          |          |                     |--0.95%--ntt_openmp
+                          |          |          |                     |          
+                          |          |          |                      --0.82%--0xffffbc55a1b0
+                          |          |          |          
+                          |          |           --9.45%--ntt_openmp
+                          |          |                     |          
+                          |          |                     |--8.05%--GOMP_parallel
+                          |          |                     |          |          
+                          |          |                     |          |--3.03%--__umodti3
+                          |          |                     |          |          
+                          |          |                     |          |--2.19%--ntt_openmp
+                          |          |                     |          |          
+                          |          |                     |          |--1.51%--0xffffbc55a1b0
+                          |          |                     |          |          |          
+                          |          |                     |          |          |--0.83%--0xffffbc55c210
+                          |          |                     |          |          |          
+                          |          |                     |          |           --0.68%--0xffffbc55c21c
+                          |          |                     |          |          
+                          |          |                     |          |--0.77%--ntt_openmp
+                          |          |                     |          |          
+                          |          |                     |           --0.56%--__umodti3@plt
+                          |          |                     |          
+                          |          |                      --0.90%--0xffffbc55a9f4
+                          |          |          
+                          |           --0.91%--GOMP_parallel
+                          |                     __umodti3
+                          |          
+                          |--4.46%--fCheck
+                          |          |          
+                          |           --4.05%--std::istream::_M_extract<unsigned long>
+                          |                     |          
+                          |                      --3.57%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+                          |          
+                          |--3.91%--fWrite
+                          |          |          
+                          |           --3.48%--std::ostream::_M_insert<unsigned long>
+                          |                     |          
+                          |                      --2.17%--0xffffbc76e578
+                          |          
+                           --0.95%--fRead
+                                     std::istream::_M_extract<unsigned long>
+                                     |          
+                                      --0.92%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+    34.64%     0.00%  main     libc.so.6              [.] 0x0000ffffbc37b000
+            |
+            ---0xffffbc37b000
+               |          
+                --34.42%--main
+                          |          
+                          |--25.11%--poly_multiply_crt_openmp
+                          |          |          
+                          |          |--24.20%--multiply_mod_ntt
+                          |          |          |          
+                          |          |          |--13.42%--ntt_openmp
+                          |          |          |          |          
+                          |          |          |           --11.13%--GOMP_parallel
+                          |          |          |                     |          
+                          |          |          |                     |--4.31%--ntt_openmp
+                          |          |          |                     |          
+                          |          |          |                     |--3.41%--__umodti3
+                          |          |          |                     |          
+                          |          |          |                     |--1.63%--__umodti3@plt
+                          |          |          |                     |          
+                          |          |          |                     |--0.95%--ntt_openmp
+                          |          |          |                     |          
+                          |          |          |                      --0.82%--0xffffbc55a1b0
+                          |          |          |          
+                          |          |           --9.45%--ntt_openmp
+                          |          |                     |          
+                          |          |                     |--8.05%--GOMP_parallel
+                          |          |                     |          |          
+                          |          |                     |          |--3.03%--__umodti3
+                          |          |                     |          |          
+                          |          |                     |          |--2.19%--ntt_openmp
+                          |          |                     |          |          
+                          |          |                     |          |--1.51%--0xffffbc55a1b0
+                          |          |                     |          |          |          
+                          |          |                     |          |          |--0.83%--0xffffbc55c210
+                          |          |                     |          |          |          
+                          |          |                     |          |           --0.68%--0xffffbc55c21c
+                          |          |                     |          |          
+                          |          |                     |          |--0.77%--ntt_openmp
+                          |          |                     |          |          
+                          |          |                     |           --0.56%--__umodti3@plt
+                          |          |                     |          
+                          |          |                      --0.90%--0xffffbc55a9f4
+                          |          |          
+                          |           --0.91%--GOMP_parallel
+                          |                     __umodti3
+                          |          
+                          |--4.46%--fCheck
+                          |          |          
+                          |           --4.05%--std::istream::_M_extract<unsigned long>
+                          |                     |          
+                          |                      --3.57%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+                          |          
+                          |--3.91%--fWrite
+                          |          |          
+                          |           --3.48%--std::ostream::_M_insert<unsigned long>
+                          |                     |          
+                          |                      --2.17%--0xffffbc76e578
+                          |          
+                           --0.95%--fRead
+                                     std::istream::_M_extract<unsigned long>
+                                     |          
+                                      --0.92%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+    34.42%     0.00%  main     main                   [.] main
+            |
+            ---main
+               |          
+               |--25.11%--poly_multiply_crt_openmp
+               |          |          
+               |          |--24.20%--multiply_mod_ntt
+               |          |          |          
+               |          |          |--13.42%--ntt_openmp
+               |          |          |          |          
+               |          |          |           --11.13%--GOMP_parallel
+               |          |          |                     |          
+               |          |          |                     |--4.31%--ntt_openmp
+               |          |          |                     |          
+               |          |          |                     |--3.41%--__umodti3
+               |          |          |                     |          
+               |          |          |                     |--1.63%--__umodti3@plt
+               |          |          |                     |          
+               |          |          |                     |--0.95%--ntt_openmp
+               |          |          |                     |          
+               |          |          |                      --0.82%--0xffffbc55a1b0
+               |          |          |          
+               |          |           --9.45%--ntt_openmp
+               |          |                     |          
+               |          |                     |--8.05%--GOMP_parallel
+               |          |                     |          |          
+               |          |                     |          |--3.03%--__umodti3
+               |          |                     |          |          
+               |          |                     |          |--2.19%--ntt_openmp
+               |          |                     |          |          
+               |          |                     |          |--1.51%--0xffffbc55a1b0
+               |          |                     |          |          |          
+               |          |                     |          |          |--0.83%--0xffffbc55c210
+               |          |                     |          |          |          
+               |          |                     |          |           --0.68%--0xffffbc55c21c
+               |          |                     |          |          
+               |          |                     |          |--0.77%--ntt_openmp
+               |          |                     |          |          
+               |          |                     |           --0.56%--__umodti3@plt
+               |          |                     |          
+               |          |                      --0.90%--0xffffbc55a9f4
+               |          |          
+               |           --0.91%--GOMP_parallel
+               |                     __umodti3
+               |          
+               |--4.46%--fCheck
+               |          |          
+               |           --4.05%--std::istream::_M_extract<unsigned long>
+               |                     |          
+               |                      --3.57%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+               |          
+               |--3.91%--fWrite
+               |          |          
+               |           --3.48%--std::ostream::_M_insert<unsigned long>
+               |                     |          
+               |                      --2.17%--0xffffbc76e578
+               |          
+                --0.95%--fRead
+                          std::istream::_M_extract<unsigned long>
+                          |          
+                           --0.92%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+    29.57%    29.57%  main     libgcc_s-10.3.1.so.1   [.] __umodti3
+            |          
+            |--21.76%--0xffffbc439d5c
+            |          0xffffbc3d2518
+            |          0xffffbc5597e0
+            |          __umodti3
+            |          
+             --7.81%--_start
+                       __libc_start_main
+                       0xffffbc37b000
+                       main
+                       poly_multiply_crt_openmp
+                       |          
+                       |--6.90%--multiply_mod_ntt
+                       |          |          
+                       |          |--3.41%--ntt_openmp
+                       |          |          GOMP_parallel
+                       |          |          __umodti3
+                       |          |          
+                       |           --3.03%--ntt_openmp
+                       |                     GOMP_parallel
+                       |                     __umodti3
+                       |          
+                        --0.91%--GOMP_parallel
+                                  __umodti3
+
+    26.12%    26.11%  main     main                   [.] ntt_openmp
+            |          
+            |--19.60%--0xffffbc439d5c
+            |          0xffffbc3d2518
+            |          0xffffbc5597e0
+            |          ntt_openmp
+            |          
+             --6.50%--_start
+                       __libc_start_main
+                       0xffffbc37b000
+                       main
+                       poly_multiply_crt_openmp
+                       multiply_mod_ntt
+                       |          
+                       |--4.31%--ntt_openmp
+                       |          GOMP_parallel
+                       |          ntt_openmp
+                       |          
+                        --2.19%--ntt_openmp
+                                  GOMP_parallel
+                                  ntt_openmp
+
+    25.11%     0.00%  main     main                   [.] poly_multiply_crt_openmp
+            |
+            ---poly_multiply_crt_openmp
+               |          
+               |--24.20%--multiply_mod_ntt
+               |          |          
+               |          |--13.42%--ntt_openmp
+               |          |          |          
+               |          |           --11.13%--GOMP_parallel
+               |          |                     |          
+               |          |                     |--4.31%--ntt_openmp
+               |          |                     |          
+               |          |                     |--3.41%--__umodti3
+               |          |                     |          
+               |          |                     |--1.63%--__umodti3@plt
+               |          |                     |          
+               |          |                     |--0.95%--ntt_openmp
+               |          |                     |          
+               |          |                      --0.82%--0xffffbc55a1b0
+               |          |          
+               |           --9.45%--ntt_openmp
+               |                     |          
+               |                     |--8.05%--GOMP_parallel
+               |                     |          |          
+               |                     |          |--3.03%--__umodti3
+               |                     |          |          
+               |                     |          |--2.19%--ntt_openmp
+               |                     |          |          
+               |                     |          |--1.51%--0xffffbc55a1b0
+               |                     |          |          |          
+               |                     |          |          |--0.83%--0xffffbc55c210
+               |                     |          |          |          
+               |                     |          |           --0.68%--0xffffbc55c21c
+               |                     |          |          
+               |                     |          |--0.77%--ntt_openmp
+               |                     |          |          
+               |                     |           --0.56%--__umodti3@plt
+               |                     |          
+               |                      --0.90%--0xffffbc55a9f4
+               |          
+                --0.91%--GOMP_parallel
+                          __umodti3
+
+    24.20%     0.86%  main     main                   [.] multiply_mod_ntt
+            |          
+            |--23.33%--multiply_mod_ntt
+            |          |          
+            |          |--13.42%--ntt_openmp
+            |          |          |          
+            |          |           --11.13%--GOMP_parallel
+            |          |                     |          
+            |          |                     |--4.31%--ntt_openmp
+            |          |                     |          
+            |          |                     |--3.41%--__umodti3
+            |          |                     |          
+            |          |                     |--1.63%--__umodti3@plt
+            |          |                     |          
+            |          |                     |--0.95%--ntt_openmp
+            |          |                     |          
+            |          |                      --0.82%--0xffffbc55a1b0
+            |          |          
+            |           --9.45%--ntt_openmp
+            |                     |          
+            |                     |--8.05%--GOMP_parallel
+            |                     |          |          
+            |                     |          |--3.03%--__umodti3
+            |                     |          |          
+            |                     |          |--2.19%--ntt_openmp
+            |                     |          |          
+            |                     |          |--1.51%--0xffffbc55a1b0
+            |                     |          |          |          
+            |                     |          |          |--0.83%--0xffffbc55c210
+            |                     |          |          |          
+            |                     |          |           --0.68%--0xffffbc55c21c
+            |                     |          |          
+            |                     |          |--0.77%--ntt_openmp
+            |                     |          |          
+            |                     |           --0.56%--__umodti3@plt
+            |                     |          
+            |                      --0.90%--0xffffbc55a9f4
+            |          
+             --0.86%--_start
+                       __libc_start_main
+                       0xffffbc37b000
+                       main
+                       poly_multiply_crt_openmp
+                       multiply_mod_ntt
+
+    20.55%     0.00%  main     libgomp.so.1.0.0       [.] GOMP_parallel
+            |
+            ---GOMP_parallel
+               |          
+               |--7.81%--__umodti3
+               |          
+               |--6.50%--ntt_openmp
+               |          
+               |--2.33%--0xffffbc55a1b0
+               |          |          
+               |          |--1.28%--0xffffbc55c210
+               |          |          
+               |           --1.05%--0xffffbc55c21c
+               |          
+               |--2.19%--__umodti3@plt
+               |          
+                --1.72%--ntt_openmp
+
+    13.42%     1.98%  main     main                   [.] ntt_openmp
+            |          
+            |--11.44%--ntt_openmp
+            |          |          
+            |           --11.13%--GOMP_parallel
+            |                     |          
+            |                     |--4.31%--ntt_openmp
+            |                     |          
+            |                     |--3.41%--__umodti3
+            |                     |          
+            |                     |--1.63%--__umodti3@plt
+            |                     |          
+            |                     |--0.95%--ntt_openmp
+            |                     |          
+            |                      --0.82%--0xffffbc55a1b0
+            |          
+             --1.98%--_start
+                       __libc_start_main
+                       0xffffbc37b000
+                       main
+                       poly_multiply_crt_openmp
+                       multiply_mod_ntt
+                       ntt_openmp
+
+     9.70%     9.60%  main     main                   [.] __umodti3@plt
+            |          
+            |--7.41%--0xffffbc439d5c
+            |          0xffffbc3d2518
+            |          0xffffbc5597e0
+            |          __umodti3@plt
+            |          
+             --2.19%--_start
+                       __libc_start_main
+                       0xffffbc37b000
+                       main
+                       poly_multiply_crt_openmp
+                       multiply_mod_ntt
+                       |          
+                       |--1.63%--ntt_openmp
+                       |          GOMP_parallel
+                       |          __umodti3@plt
+                       |          
+                        --0.56%--ntt_openmp
+                                  GOMP_parallel
+                                  __umodti3@plt
+
+     9.45%     0.50%  main     main                   [.] ntt_openmp
+            |          
+            |--8.95%--ntt_openmp
+            |          |          
+            |          |--8.05%--GOMP_parallel
+            |          |          |          
+            |          |          |--3.03%--__umodti3
+            |          |          |          
+            |          |          |--2.19%--ntt_openmp
+            |          |          |          
+            |          |          |--1.51%--0xffffbc55a1b0
+            |          |          |          |          
+            |          |          |          |--0.83%--0xffffbc55c210
+            |          |          |          |          
+            |          |          |           --0.68%--0xffffbc55c21c
+            |          |          |          
+            |          |          |--0.77%--ntt_openmp
+            |          |          |          
+            |          |           --0.56%--__umodti3@plt
+            |          |          
+            |           --0.90%--0xffffbc55a9f4
+            |          
+             --0.50%--_start
+                       __libc_start_main
+                       0xffffbc37b000
+                       main
+                       poly_multiply_crt_openmp
+                       multiply_mod_ntt
+                       ntt_openmp
+
+     7.08%     7.08%  main     main                   [.] ntt_openmp
+            |          
+            |--5.36%--0xffffbc439d5c
+            |          0xffffbc3d2518
+            |          0xffffbc5597e0
+            |          ntt_openmp
+            |          
+             --1.72%--_start
+                       __libc_start_main
+                       0xffffbc37b000
+                       main
+                       poly_multiply_crt_openmp
+                       multiply_mod_ntt
+                       |          
+                       |--0.95%--ntt_openmp
+                       |          GOMP_parallel
+                       |          ntt_openmp
+                       |          
+                        --0.77%--ntt_openmp
+                                  GOMP_parallel
+                                  ntt_openmp
+
+     5.93%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc5597e8
+            |
+            ---0xffffbc5597e8
+               |          
+               |--4.32%--0xffffbc55c4ec
+               |          
+                --1.61%--0xffffbc55c4e0
+
+     5.05%     5.05%  main     libgomp.so.1.0.0       [.] 0x000000000001c4ec
+            |          
+            |--4.32%--0xffffbc439d5c
+            |          0xffffbc3d2518
+            |          0xffffbc5597e8
+            |          0xffffbc55c4ec
+            |          
+             --0.74%--_start
+                       __libc_start_main
+                       0xffffbc37b000
+                       main
+                       poly_multiply_crt_openmp
+                       multiply_mod_ntt
+
+     5.05%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55c4ec
+            |
+            ---0xffffbc55c4ec
+
+     4.99%     0.00%  main     libstdc++.so.6.0.28    [.] std::istream::_M_extract<unsigned long>
+            |          
+             --4.99%--std::istream::_M_extract<unsigned long>
+                       |          
+                        --4.49%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+     4.49%     4.20%  main     libstdc++.so.6.0.28    [.] std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+            |          
+             --4.20%--_start
+                       __libc_start_main
+                       0xffffbc37b000
+                       main
+                       |          
+                       |--3.57%--fCheck
+                       |          std::istream::_M_extract<unsigned long>
+                       |          std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+                       |          
+                        --0.63%--fRead
+                                  std::istream::_M_extract<unsigned long>
+                                  std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+     4.46%     0.41%  main     main                   [.] fCheck
+            |          
+             --4.05%--fCheck
+                       std::istream::_M_extract<unsigned long>
+                       |          
+                        --3.57%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+     3.91%     0.00%  main     main                   [.] fWrite
+            |
+            ---fWrite
+               |          
+                --3.48%--std::ostream::_M_insert<unsigned long>
+                          |          
+                           --2.17%--0xffffbc76e578
+
+     3.79%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc5597c4
+            |
+            ---0xffffbc5597c4
+               |          
+               |--2.00%--0xffffbc55c21c
+               |          
+                --1.29%--0xffffbc55c210
+
+     3.48%     0.47%  main     libstdc++.so.6.0.28    [.] std::ostream::_M_insert<unsigned long>
+            |          
+             --3.01%--std::ostream::_M_insert<unsigned long>
+                       |          
+                        --2.17%--0xffffbc76e578
+
+     3.05%     3.05%  main     libgomp.so.1.0.0       [.] 0x000000000001c21c
+            |          
+            |--2.00%--0xffffbc439d5c
+            |          0xffffbc3d2518
+            |          0xffffbc5597c4
+            |          0xffffbc55c21c
+            |          
+             --1.05%--_start
+                       __libc_start_main
+                       0xffffbc37b000
+                       main
+                       poly_multiply_crt_openmp
+                       multiply_mod_ntt
+                       |          
+                        --0.68%--ntt_openmp
+                                  GOMP_parallel
+                                  0xffffbc55a1b0
+                                  0xffffbc55c21c
+
+     3.05%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55c21c
+            |
+            ---0xffffbc55c21c
+
+     2.57%     2.57%  main     libgomp.so.1.0.0       [.] 0x000000000001c210
+            |          
+            |--1.29%--0xffffbc439d5c
+            |          0xffffbc3d2518
+            |          0xffffbc5597c4
+            |          0xffffbc55c210
+            |          
+             --1.28%--_start
+                       __libc_start_main
+                       0xffffbc37b000
+                       main
+                       poly_multiply_crt_openmp
+                       multiply_mod_ntt
+                       |          
+                        --0.83%--ntt_openmp
+                                  GOMP_parallel
+                                  0xffffbc55a1b0
+                                  0xffffbc55c210
+
+     2.57%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55c210
+            |
+            ---0xffffbc55c210
+
+     2.33%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55a1b0
+            |
+            ---0xffffbc55a1b0
+               |          
+               |--1.28%--0xffffbc55c210
+               |          
+                --1.05%--0xffffbc55c21c
+
+     2.17%     2.17%  main     libstdc++.so.6.0.28    [.] 0x000000000011e578
+            |
+            ---_start
+               __libc_start_main
+               0xffffbc37b000
+               main
+               fWrite
+               std::ostream::_M_insert<unsigned long>
+               0xffffbc76e578
+
+     2.17%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffffbc76e578
+            |
+            ---0xffffbc76e578
+
+     2.08%     2.08%  main     libgomp.so.1.0.0       [.] 0x000000000001c4e0
+            |          
+             --1.61%--0xffffbc439d5c
+                       0xffffbc3d2518
+                       0xffffbc5597e8
+                       0xffffbc55c4e0
+
+     2.08%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55c4e0
+            |
+            ---0xffffbc55c4e0
+
+     1.21%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55a9f4
+            |
+            ---0xffffbc55a9f4
+               |          
+                --0.74%--0xffffbc55c4ec
+
+     1.02%     1.02%  main     main                   [.] multiply_mod_ntt
+            |
+            ---0xffffbc439d5c
+               0xffffbc3d2518
+               0xffffbc5597e0
+               multiply_mod_ntt
+
+     0.95%     0.00%  main     main                   [.] fRead
+            |
+            ---fRead
+               std::istream::_M_extract<unsigned long>
+               |          
+                --0.92%--std::num_get<char, std::istreambuf_iterator<char, std::char_traits<char> > >::_M_extract_int<unsigned long>
+
+     0.50%     0.50%  main     libstdc++.so.6.0.28    [.] std::istream::sentry::sentry
+     0.43%     0.43%  main     libstdc++.so.6.0.28    [.] 0x000000000011e558
+     0.43%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffffbc76e558
+     0.42%     0.42%  main     libc.so.6              [.] 0x000000000009c0c0
+     0.42%     0.00%  main     libstdc++.so.6.0.28    [.] std::__ostream_insert<char, std::char_traits<char> >
+     0.42%     0.00%  main     libc.so.6              [.] 0x0000ffffbc3ec0c0
+     0.42%     0.42%  main     libstdc++.so.6.0.28    [.] 0x000000000011ff74
+     0.42%     0.00%  main     libstdc++.so.6.0.28    [.] std::num_put<char, std::ostreambuf_iterator<char, std::char_traits<char> > >::_M_insert_int<unsigned long>
+     0.42%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffffbc76ff74
+     0.39%     0.39%  main     libgomp.so.1.0.0       [.] 0x0000000000030454
+     0.39%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc570454
+     0.37%     0.37%  main     main                   [.] ntt_openmp
+     0.22%     0.22%  main     libc.so.6              [.] 0x000000000009dd40
+     0.22%     0.00%  main     libc.so.6              [.] 0x0000ffffbc3edd40
+     0.16%     0.16%  main     libstdc++.so.6.0.28    [.] 0x00000000001228e4
+     0.16%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffffbc7728e4
+     0.11%     0.11%  main     libgomp.so.1.0.0       [.] 0x000000000001c220
+     0.11%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55c220
+     0.11%     0.11%  main     [unknown]              [k] 0xffffcb7c9d0f0734
+     0.11%     0.00%  main     [unknown]              [.] 0xffffcb7c9d0f2b68
+     0.11%     0.00%  main     [unknown]              [.] 0xffffcb7c9d0f014c
+     0.11%     0.00%  main     [unknown]              [.] 0xffffcb7c9d256190
+     0.11%     0.00%  main     [unknown]              [.] 0xffffcb7c9d1a7ba4
+     0.07%     0.07%  main     libstdc++.so.6.0.28    [.] 0x00000000001229e0
+     0.07%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffffbc7729e0
+     0.06%     0.06%  main     libstdc++.so.6.0.28    [.] 0x000000000011ff58
+     0.06%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffffbc76ff58
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x000000000001c238
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55c238
+     0.00%     0.00%  main     libc.so.6              [.] getenv
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x000000000001c500
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55c500
+     0.00%     0.00%  main     libc.so.6              [.] syscall
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x00000000000197e8
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x000000000001a9f4
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x000000000001c4f8
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55c4f8
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000000000030450
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc570450
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] omp_get_num_threads
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000000000014a30
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc554a30
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x000000000001c514
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55c514
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x000000000001c234
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55c234
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x000000000001c544
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55c544
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x000000000001c264
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc55c264
+     0.00%     0.00%  main     libstdc++.so.6.0.28    [.] std::basic_filebuf<char, std::char_traits<char> >::underflow
+     0.00%     0.00%  main     libstdc++.so.6.0.28    [.] 0x00000000001228b0
+     0.00%     0.00%  main     libstdc++.so.6.0.28    [.] 0x0000ffffbc7728b0
+     0.00%     0.00%  main     libc.so.6              [.] __clone
+     0.00%     0.00%  main     libgomp.so.1.0.0       [.] 0x0000ffffbc559c64
+     0.00%     0.00%  main     libc.so.6              [.] pthread_create
+     0.00%     0.00%  main     ld-linux-aarch64.so.1  [.] 0x000000000001cdc0
+     0.00%     0.00%  main     ld-linux-aarch64.so.1  [.] 0x0000ffffbc867dc0
+
+
+#
+# (Tip: To count events in every 1000 msec: perf stat -I 1000)
+#

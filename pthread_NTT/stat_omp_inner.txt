@@ -1,0 +1,24 @@
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 330.379 (ms)
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 303.013 (ms)
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 331.855 (ms)
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 395.247 (ms)
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 405.904 (ms)
+
+ Performance counter stats for './main 4 4' (5 runs):
+
+          1,182.95 msec task-clock:u              #    2.469 CPUs utilized            ( +-  2.11% )
+                 0      context-switches:u        #    0.000 K/sec                  
+                 0      cpu-migrations:u          #    0.000 K/sec                  
+             4,190      page-faults:u             #    0.004 M/sec                    ( +- 12.18% )
+     2,860,395,204      cycles:u                  #    2.418 GHz                      ( +-  1.35% )
+     4,987,059,089      instructions:u            #    1.74  insn per cycle           ( +-  2.41% )
+   <not supported>      branches:u                                                  
+        15,339,701      branch-misses:u                                               ( +-  0.06% )
+
+            0.4791 +- 0.0222 seconds time elapsed  ( +-  4.64% )
+

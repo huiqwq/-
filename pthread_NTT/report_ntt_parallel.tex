@@ -1,0 +1,430 @@
+\documentclass[UTF8,a4paper,12pt]{ctexart}
+
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  stringstyle=\color{teal},
+  breaklines=true,
+  frame=single,
+  columns=fullflexible
+}
+
+\title{并行程序设计 Lab3：NTT 的 Pthread 与 OpenMP 并行优化实验报告}
+\author{姓名：\underline{\hspace{4cm}} \quad 学号：s2411764}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{实验目的}
+
+本实验选择 NTT（Number Theoretic Transform）作为并行优化对象。实验目标包括：
+
+\begin{enumerate}
+  \item 实现朴素多项式乘法的 pthread 并行优化版本，作为 baseline。
+  \item 实现基础 NTT 的 pthread 并行优化版本。
+  \item 实现基于 CRT（中国剩余定理）的任意模数 NTT，包括串行版本和 pthread 版本。
+  \item 在 CRT NTT 的基础上，使用 OpenMP 实现自动调度优化，并进一步尝试 OpenMP SIMD 自动向量化。
+\end{enumerate}
+
+实验过程中遵循课程说明中的线程使用限制：鲲鹏服务器平台每个任务申请 1 个 CPU（8 核），因此多线程程序最多使用 8 个工作线程。对于 pthread 实现，尽量采用 ``最多 7 个子线程 + 主线程参与计算'' 的方式，避免无意义地增加线程数量。
+
+\section{实验环境与编译方式}
+
+实验平台为课程提供的鲲鹏服务器。代码主要使用 C++ 实现。
+
+pthread 版本编译方式如下：
+
+\begin{lstlisting}[language=bash]
+g++ -std=c++17 -O2 -pthread main.cc -o main
+\end{lstlisting}
+
+OpenMP 版本编译方式如下：
+
+\begin{lstlisting}[language=bash]
+g++ -std=c++17 -O3 -fopenmp -march=native main.cc -o main
+\end{lstlisting}
+
+运行测试脚本时，若脚本只编译 \texttt{main.cc}，则先将对应版本复制为 \texttt{main.cc}：
+
+\begin{lstlisting}[language=bash]
+cp main_crt4_pthread.cc main.cc
+./test.sh 1 1
+\end{lstlisting}
+
+\section{实验实现过程}
+
+\subsection{朴素多项式乘法的 pthread 优化}
+
+首先实现朴素多项式乘法的 pthread 版本，对应文件为：
+
+\begin{center}
+\texttt{main\_naive\_pthread.cc}
+\end{center}
+
+朴素乘法原始形式为：
+
+\[
+ab[i+j] = ab[i+j] + a[i]b[j] \pmod p
+\]
+
+如果直接对外层循环 \texttt{i} 并行，会导致多个线程同时写同一个 \texttt{ab[i+j]}，需要锁或原子操作，开销较大。因此本实验采用按结果下标划分任务的方式：
+
+\[
+ab[k] = \sum_i a[i]b[k-i] \pmod p
+\]
+
+对于每个结果下标 \(k\)，合法的 \(i\) 范围为：
+
+\[
+\max(0,k-n+1) \le i \le \min(n-1,k)
+\]
+
+因此每个线程负责一段连续的 \texttt{ab[k]}，不同线程写入不同位置，不需要互斥锁，也不会发生数据竞争。
+
+线程数量控制方式为：
+
+\begin{lstlisting}[language=C++]
+threads = std::max(1, std::min(threads, 8));
+int worker_threads = threads - 1;
+\end{lstlisting}
+
+其中 \texttt{worker\_threads} 个线程由 \texttt{pthread\_create} 创建，主线程负责最后一段任务：
+
+\begin{lstlisting}[language=C++]
+for (int t = 0; t < worker_threads; ++t) {
+    pthread_create(&tids[t], nullptr, plain_worker, &tasks[t]);
+}
+
+plain_worker(&tasks[worker_threads]);
+
+for (int t = 0; t < worker_threads; ++t) {
+    pthread_join(tids[t], nullptr);
+}
+\end{lstlisting}
+
+该实现适合作为 baseline，但复杂度仍然是 \(O(n^2)\)，因此在 \(n=131072\) 时运行时间明显较长。
+
+\subsection{基础 NTT 的 pthread 优化}
+
+随后实现基础 NTT 的 pthread 优化，对应文件为：
+
+\begin{center}
+\texttt{main\_ntt\_pthread.cc}
+\end{center}
+
+NTT 将多项式乘法转化为：
+
+\[
+C = \mathrm{INTT}(\mathrm{NTT}(A) \cdot \mathrm{NTT}(B))
+\]
+
+复杂度由朴素卷积的 \(O(n^2)\) 降为 \(O(n\log n)\)。
+
+基础 NTT 的蝶形循环结构为：
+
+\begin{lstlisting}[language=C++]
+for (int len = 2; len <= n; len <<= 1) {
+    for (int base = 0; base < n; base += len) {
+        for (int k = 0; k < len / 2; ++k) {
+            // butterfly
+        }
+    }
+}
+\end{lstlisting}
+
+本实验在每一层 NTT 内部进行并行。由于同一层的蝶形操作相互独立，因此可以安全并行；但不同层之间存在依赖，需要在线程之间同步。
+
+实现中采用两种划分策略：
+
+\begin{enumerate}
+  \item 当 block 数量足够多时，按 block 轮转分配给线程。
+  \item 当后期 block 数量少于线程数时，改为按 butterfly 数量划分，避免只有少数线程工作。
+\end{enumerate}
+
+每一层结束后使用 \texttt{pthread\_barrier\_wait} 同步：
+
+\begin{lstlisting}[language=C++]
+pthread_barrier_wait(&ctx->barrier);
+\end{lstlisting}
+
+这样保证所有线程完成当前层蝶形运算后，再进入下一层。
+
+\subsection{CRT 实现任意模数 NTT}
+
+对于任意目标模数 \(P\)，如果 \(P\) 本身不是 NTT 友好模数，不能直接在模 \(P\) 下做 NTT。CRT 方法的思想是选取若干个 NTT 友好小模数：
+
+\[
+p_1,p_2,\ldots,p_k
+\]
+
+分别计算：
+
+\[
+C_i = A \cdot B \pmod {p_i}
+\]
+
+然后对每个结果系数使用中国剩余定理恢复：
+
+\[
+C[x] \equiv C_i[x] \pmod {p_i}
+\]
+
+最后再对目标模数 \(P\) 取模。
+
+三模数版本对应文件为：
+
+\begin{center}
+\texttt{main\_crt\_serial.cc}, \quad \texttt{main\_crt\_pthread.cc}
+\end{center}
+
+三模数为：
+
+\begin{lstlisting}[language=C++]
+998244353
+1004535809
+469762049
+\end{lstlisting}
+
+三模数乘积约为：
+
+\[
+4.71 \times 10^{26}
+\]
+
+若 \(n=131072\)，该范围不足以覆盖特别大的目标模数下的最坏卷积系数。因此又实现四模数版本。
+
+\subsection{四模数 CRT NTT}
+
+四模数版本对应文件为：
+
+\begin{center}
+\texttt{main\_crt4\_serial.cc}, \quad \texttt{main\_crt4\_pthread.cc}
+\end{center}
+
+采用的四个 NTT 友好模数为：
+
+\begin{lstlisting}[language=C++]
+998244353
+1004535809
+469762049
+1224736769
+\end{lstlisting}
+
+其乘积为：
+
+\[
+576929796637471070305089837581991937 \approx 5.77 \times 10^{35}
+\]
+
+对于测试中的大模数：
+
+\[
+P=1337006139375617,\quad n=131072
+\]
+
+最坏卷积系数上界约为：
+
+\[
+n(P-1)^2 \approx 2.34 \times 10^{35}
+\]
+
+因此四模数乘积能够覆盖该范围，CRT 能正确恢复真实卷积系数。
+
+pthread 四模数版本中，4 个小模数 NTT 相互独立，因此采用：
+
+\[
+3 \text{ 个子线程} + 1 \text{ 个主线程}
+\]
+
+分别处理四个模数。CRT 合并阶段按结果系数分块，最多使用 8 个工作线程。
+
+\subsection{OpenMP 内部并行优化}
+
+在 pthread 版本之后，进一步实现 OpenMP 自动调度版本，对应文件为：
+
+\begin{center}
+\texttt{main\_crt4\_openmp.cc}
+\end{center}
+
+该版本采用：
+
+\begin{enumerate}
+  \item 四个小模数串行处理。
+  \item 每个小模数内部的 NTT 使用 OpenMP 并行。
+  \item CRT 合并阶段使用 OpenMP 并行。
+\end{enumerate}
+
+OpenMP 初始化如下：
+
+\begin{lstlisting}[language=C++]
+omp_set_dynamic(1);
+omp_set_num_threads(get_omp_threads());
+omp_set_schedule(omp_sched_guided, 64);
+\end{lstlisting}
+
+其中 \texttt{get\_omp\_threads()} 将线程数限制在 8 以内。
+
+NTT 内部根据不同阶段选择不同调度方式：
+
+\begin{enumerate}
+  \item block 数充足时使用 \texttt{schedule(static)}，降低调度开销。
+  \item 后期 block 较少时拆分 butterfly，使更多线程参与计算。
+\end{enumerate}
+
+\subsection{OpenMP 模数并行优化}
+
+随后实现另一种 OpenMP 版本，对应文件为：
+
+\begin{center}
+\texttt{main\_crt4\_openmp\_modparallel.cc}
+\end{center}
+
+该版本采用模数层面的粗粒度并行：
+
+\begin{lstlisting}[language=C++]
+#pragma omp parallel for schedule(static) num_threads(mod_threads)
+for (int i = 0; i < CRT_CNT; ++i) {
+    multiply_mod_ntt(a, b, residues[i], n, CRT_MODS[i]);
+}
+\end{lstlisting}
+
+这里四个模数相互独立，因此没有数据竞争。为了避免嵌套并行，该版本中单个模数内部的 NTT 保持串行。
+
+该版本最多只会在模数计算阶段使用 4 个线程，但线程管理简单，适合作为对比实验。
+
+\subsection{OpenMP SIMD 自动向量化}
+
+最后，在模数并行 OpenMP 版本基础上尝试自动向量化，对应文件为：
+
+\begin{center}
+\texttt{main\_crt4\_openmp\_modparallel\_simd.cc}
+\end{center}
+
+该版本使用 OpenMP 4.0 提供的 \texttt{omp simd} 指令，尝试对 NTT 内层循环、点值乘法、逆变换缩放等循环进行自动向量化。
+
+由于 NTT 蝶形循环中原本存在：
+
+\[
+w \leftarrow w \cdot wn
+\]
+
+这样的循环递推依赖，不利于编译器向量化，因此实现中先预计算旋转因子数组：
+
+\begin{lstlisting}[language=C++]
+std::vector<u64> roots(half);
+roots[0] = 1;
+for (int k = 1; k < half; ++k) {
+    roots[k] = mul_mod_ntt(roots[k - 1], wn, mod);
+}
+\end{lstlisting}
+
+然后在蝶形循环中加入：
+
+\begin{lstlisting}[language=C++]
+#pragma omp simd
+for (int k = 0; k < half; ++k) {
+    u64 x = f[base + k];
+    u64 y = mul_mod_ntt(f[base + k + half], roots[k], mod);
+    f[base + k] = add_mod(x, y, mod);
+    f[base + k + half] = sub_mod(x, y, mod);
+}
+\end{lstlisting}
+
+其中 \texttt{mul\_mod\_ntt} 使用 64 位乘法：
+
+\begin{lstlisting}[language=C++]
+static inline u64 mul_mod_ntt(u64 x, u64 y, u64 mod) {
+    return x * y % mod;
+}
+\end{lstlisting}
+
+这是安全的，因为 CRT 小模数均小于约 \(1.3\times 10^9\)，乘积不会超过 \texttt{uint64\_t} 范围。但在目标大模数或 CRT 合并中仍使用 \texttt{\_\_uint128\_t} 版本，避免溢出。
+
+\section{实验结果}
+
+已记录的部分实验结果如下。由于部分版本尚需在服务器上重复测试，表中保留待补充项。
+
+\begin{table}[h]
+\centering
+\begin{tabular}{cccr}
+\toprule
+版本 & 测试编号 & 模数 & 时间 \\
+\midrule
+朴素 pthread & 0 & 7340033 & 0.499461 ms \\
+朴素 pthread & 1 & 7340033 & 7832.46 ms \\
+四模数 CRT 初版 & 0 & 7340033 & 0.026291 ms \\
+四模数 CRT 初版 & 1 & 7340033 & 482.782 ms \\
+四模数 CRT 初版 & 2 & 104857601 & 481.510 ms \\
+四模数 CRT 初版 & 3 & 469762049 & 477.847 ms \\
+四模数 CRT 初版 & 4 & 1337006139375617 & 结果错误 \\
+四模数 CRT 修正版 & 4 & 1337006139375617 & 结果正确，时间待补充 \\
+\bottomrule
+\end{tabular}
+\caption{部分实验结果记录}
+\end{table}
+
+初版四模数 CRT 使用的第四模数为 \(754974721\)。虽然理论乘积大于最坏上界，但余量较小，最后一个大模数测试出现错误。将第四模数改为 \(1224736769\) 后，CRT 覆盖范围增大，最后一个测试点结果正确。
+
+\section{结果分析}
+
+\subsection{朴素 pthread 与 NTT 的差异}
+
+朴素 pthread 版本虽然避免了写冲突，但算法复杂度仍为 \(O(n^2)\)。当 \(n=131072\) 时，计算量非常大，因此只能作为 baseline。
+
+基础 NTT 将复杂度降低到 \(O(n\log n)\)，是大规模测试的主要优化方向。
+
+\subsection{CRT 的作用}
+
+CRT 的作用是解决目标模数过大或非 NTT 友好时无法直接做 NTT 的问题。通过多个 NTT 友好小模数分别计算，再用中国剩余定理恢复，可以实现任意模数下的多项式乘法。
+
+但是 CRT 正确性的关键条件是：
+
+\[
+\prod_i p_i > n(P-1)^2
+\]
+
+因此三模数在大模数测试中可能不够，四模数提供了更大的恢复范围。
+
+\subsection{pthread 与 OpenMP 的比较}
+
+pthread 版本控制更细，可以明确指定主线程也参与计算，符合课程中对线程数量的要求。但 pthread 需要手动创建线程、传递参数、同步和回收。
+
+OpenMP 版本代码更简洁，可以通过 \texttt{schedule(static)}、\texttt{schedule(guided)} 等策略快速尝试不同负载分配方式。对于 NTT 这种规则计算，static 调度开销较小；对于 CRT 合并等任务，guided 调度可以改善负载均衡。
+
+\subsection{模数并行与内部并行}
+
+CRT 的不同模数之间天然独立，因此可以进行模数并行。但四模数最多只提供 4 个并行任务，无法充分利用 8 核。
+
+内部并行则在单个 NTT 内部划分蝶形计算，粒度更细，更容易利用 8 核。因此对于 \(n=131072\) 的大规模 NTT，内部并行通常更适合；模数并行适合作为对比方案。
+
+\subsection{SIMD 自动向量化}
+
+OpenMP SIMD 版本通过 \texttt{\#pragma omp simd} 提示编译器对内层循环向量化。由于模乘中存在取模操作，编译器不一定能完全生成理想 SIMD 指令，但通过预计算旋转因子消除循环依赖后，至少为自动向量化创造了条件。
+
+\section{总结}
+
+本实验按照从简单到复杂的顺序，依次实现了朴素 pthread、基础 NTT pthread、CRT 串行、CRT pthread、OpenMP 自动调度以及 OpenMP SIMD 自动向量化版本。
+
+实验表明：
+
+\begin{enumerate}
+  \item 朴素 pthread 能验证多线程划分思想，但复杂度过高。
+  \item 基础 NTT 是处理大规模多项式乘法的关键。
+  \item CRT 可以将任意模数问题转化为多个 NTT 友好小模数问题。
+  \item 对大模数测试，三模数 CRT 覆盖范围不足，四模数更稳。
+  \item pthread 适合精细控制线程结构，OpenMP 适合快速尝试自动调度和 SIMD 优化。
+\end{enumerate}
+
+\end{document}
