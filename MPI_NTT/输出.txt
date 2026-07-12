@@ -1,0 +1,163 @@
+===== v1 correctness test: cases 0-4 =====
+MPI processes = 4, OMP_NUM_THREADS = 1, repeat = 1
+polynomial multiply result is right
+latency for n = 4 p = 7340033 : 0.0517368 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 7340033 : 133.987 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 104857601 : 133.133 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 469762049 : 132.304 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 135.248 (ms) repeat = 0
+===== v1 focused performance test: case 4 repeat 5 =====
+MPI processes = 4, OMP_NUM_THREADS = 1, repeat = 5
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 140.848 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 136.3 (ms) repeat = 1
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 135.365 (ms) repeat = 2
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 135.131 (ms) repeat = 3
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 134.933 (ms) repeat = 4
+
+Authorized users only. All activities may be monitored and reported.
+
+===== v2 correctness test: cases 0-4 =====
+MPI stage version, processes = 4, OMP_NUM_THREADS = 1, repeat = 1
+polynomial multiply result is right
+latency for n = 4 p = 7340033 : 0.207901 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 7340033 : 400.418 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 104857601 : 366.883 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 469762049 : 365.147 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 351.992 (ms) repeat = 0
+===== v2 focused performance test: case 4 repeat 5 =====
+MPI stage version, processes = 4, OMP_NUM_THREADS = 1, repeat = 5
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 361.261 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 347.167 (ms) repeat = 1
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 346.936 (ms) repeat = 2
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 347.083 (ms) repeat = 3
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 347.08 (ms) repeat = 4
+
+Authorized users only. All activities may be monitored and reported.
+
+===== v3 correctness test: cases 0-4 =====
+MPI stage + Barrett version, processes = 4, OMP_NUM_THREADS = 1, repeat = 1
+polynomial multiply result is right
+latency for n = 4 p = 7340033 : 0.211239 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 7340033 : 320.991 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 104857601 : 314.793 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 469762049 : 315.433 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 319.257 (ms) repeat = 0
+===== v3 focused performance test: case 4 repeat 5 =====
+MPI stage + Barrett version, processes = 4, OMP_NUM_THREADS = 1, repeat = 5
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 324.377 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 318.024 (ms) repeat = 1
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 318.703 (ms) repeat = 2
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 317.794 (ms) repeat = 3
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 317.927 (ms) repeat = 4
+
+Authorized users only. All activities may be monitored and reported.
+
+===== v4 correctness test: cases 0-4 =====
+MPI stage + Barrett + DIF/DIT version, processes = 4, OMP_NUM_THREADS = 1, repeat = 1
+polynomial multiply result is right
+latency for n = 4 p = 7340033 : 0.178099 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 7340033 : 271.84 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 104857601 : 265.71 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 469762049 : 266.294 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 268.848 (ms) repeat = 0
+===== v4 focused performance test: case 4 repeat 5 =====
+MPI stage + Barrett + DIF/DIT version, processes = 4, OMP_NUM_THREADS = 1, repeat = 5
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 294.576 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 290.667 (ms) repeat = 1
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 289.886 (ms) repeat = 2
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 289.117 (ms) repeat = 3
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 290.491 (ms) repeat = 4
+
+Authorized users only. All activities may be monitored and reported.
+
+===== v5 correctness test: cases 0-4 =====
+MPI CRT mod-parallel + OpenMP/SIMD + DIF/DIT version, processes = 4, OMP_NUM_THREADS = 2, repeat = 1
+polynomial multiply result is right
+latency for n = 4 p = 7340033 : 0.503778 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 7340033 : 68.2306 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 104857601 : 65.6958 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 469762049 : 66.2596 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 68.6455 (ms) repeat = 0
+===== v5 focused performance test: case 4 repeat 5 =====
+MPI CRT mod-parallel + OpenMP/SIMD + DIF/DIT version, processes = 4, OMP_NUM_THREADS = 2, repeat = 5
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 70.3037 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 66.7007 (ms) repeat = 1
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 66.7377 (ms) repeat = 2
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 66.7486 (ms) repeat = 3
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 68.177 (ms) repeat = 4
+
+Authorized users only. All activities may be monitored and reported.
+
+
+===== v5 correctness test: cases 0-4, np=4, omp=4 =====
+MPI CRT mod-parallel + OpenMP/SIMD + DIF/DIT version, processes = 4, OMP_NUM_THREADS = 4, repeat = 1
+polynomial multiply result is right
+latency for n = 4 p = 7340033 : 6.70028 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 7340033 : 105.882 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 104857601 : 84.2943 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 469762049 : 93.7338 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 106.176 (ms) repeat = 0
+===== v5 focused performance test: case 4 repeat 5, np=4, omp=4 =====
+MPI CRT mod-parallel + OpenMP/SIMD + DIF/DIT version, processes = 4, OMP_NUM_THREADS = 4, repeat = 5
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 94.2917 (ms) repeat = 0
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 100.991 (ms) repeat = 1
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 92.4861 (ms) repeat = 2
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 91.9242 (ms) repeat = 3
+polynomial multiply result is right
+latency for n = 131072 p = 1337006139375617 : 80.0245 (ms) repeat = 4
+
+Authorized users only. All activities may be monitored and reported.
+
