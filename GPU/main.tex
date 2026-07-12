@@ -1,0 +1,731 @@
+﻿\documentclass[a4paper]{article}
+
+\input{style/ch_xelatex.tex}
+\input{style/scala.tex}
+
+%代码段设置
+\lstset{numbers=left,
+basicstyle=\tiny,
+numberstyle=\tiny,
+keywordstyle=\color{blue!70},
+commentstyle=\color{red!50!green!50!blue!50},
+frame=single, rulesepcolor=\color{red!20!green!20!blue!20},
+escapeinside=``
+}
+
+\graphicspath{ {images/} }
+\usepackage{ctex}
+\usepackage{graphicx}
+\usepackage{color,framed}%文本框
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumerate}
+\usepackage{xcolor}
+\usepackage{bm} 
+\usepackage{lastpage}%获得总页数
+\usepackage{fancyhdr}
+\usepackage{tabularx}  
+\usepackage{geometry}
+\usepackage{minted}
+\usepackage{graphics}
+\usepackage{subfigure}
+\usepackage{float}
+\usepackage{pdfpages}
+\usepackage{pgfplots}
+\pgfplotsset{width=10cm,compat=1.9}
+\usepackage{multirow}
+\usepackage{footnote}
+\usepackage{booktabs}
+
+%-----------------------伪代码------------------
+\usepackage{algorithm}  
+\usepackage{algorithmicx}  
+\usepackage{algpseudocode}  
+\floatname{algorithm}{Algorithm}  
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}  
+\renewcommand{\algorithmicensure}{\textbf{Output:}} 
+\usepackage{lipsum}  
+\makeatletter
+\newenvironment{breakablealgorithm}
+  {% \begin{breakablealgorithm}
+  \begin{center}
+     \refstepcounter{algorithm}% New algorithm
+     \hrule height.8pt depth0pt \kern2pt% \@fs@pre for \@fs@ruled
+     \renewcommand{\caption}[2][\relax]{% Make a new \caption
+      {\raggedright\textbf{\ALG@name~\thealgorithm} ##2\par}%
+      \ifx\relax##1\relax % #1 is \relax
+         \addcontentsline{loa}{algorithm}{\protect\numberline{\thealgorithm}##2}%
+      \else % #1 is not \relax
+         \addcontentsline{loa}{algorithm}{\protect\numberline{\thealgorithm}##1}%
+      \fi
+      \kern2pt\hrule\kern2pt
+     }
+  }{% \end{breakablealgorithm}
+     \kern2pt\hrule\relax% \@fs@post for \@fs@ruled
+  \end{center}
+  }
+\makeatother
+%------------------------代码-------------------
+\usepackage{xcolor} 
+\usepackage{listings} 
+\lstset{ 
+breaklines,%自动换行
+basicstyle=\small,
+escapeinside=``,
+keywordstyle=\color{ blue!70} \bfseries,
+commentstyle=\color{red!50!green!50!blue!50},% 
+stringstyle=\ttfamily,% 
+extendedchars=false,% 
+linewidth=\textwidth,% 
+numbers=left,% 
+numberstyle=\tiny \color{blue!50},% 
+frame=trbl% 
+rulesepcolor= \color{ red!20!green!20!blue!20} 
+}
+
+%-------------------------页面边距--------------
+\geometry{a4paper,left=2.3cm,right=2.3cm,top=2.7cm,bottom=2.7cm}
+%-------------------------页眉页脚--------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{\kaishu \leftmark}
+% \chead{}
+\rhead{\kaishu 并行程序设计实验报告}%加粗\bfseries 
+\lfoot{}
+\cfoot{\thepage}
+\rfoot{}
+\renewcommand{\headrulewidth}{0.1pt}  
+\renewcommand{\footrulewidth}{0pt}%去掉横线
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}%标题横线
+\newcommand{\HRulegrossa}{\rule{\linewidth}{1.2mm}}
+\setlength{\textfloatsep}{10mm}%设置图片的前后间距
+%--------------------文档内容--------------------
+
+\begin{document}
+\renewcommand{\contentsname}{目\ 录}
+\renewcommand{\appendixname}{附录}
+\renewcommand{\appendixpagename}{附录}
+\renewcommand{\refname}{参考文献} 
+\renewcommand{\figurename}{图}
+\renewcommand{\tablename}{表}
+\renewcommand{\today}{\number\year 年 \number\month 月 \number\day 日}
+
+%-------------------------封面----------------
+\begin{titlepage}
+    \begin{center}
+    \includegraphics[width=0.8\textwidth]{NKU.png}\\[1cm]
+    \vspace{20mm}
+		\textbf{\huge\textbf{\kaishu{计算机学院}}}\\[0.5cm]
+		\textbf{\huge{\kaishu{并行程序设计期末报告}}}\\[2.3cm]
+		\textbf{\Huge\textbf{\kaishu{基于 HIP 的 NTT}}}\\[0.5cm]
+		\textbf{\Huge\textbf{\kaishu{并行化与模乘优化}}}
+
+		\vspace{\fill}
+    
+    % \textbf{\Large \textbf{并行程序设计期末实验报告}}\\[0.8cm]
+    % \HRule \\[0.9cm]
+    % \HRule \\[2.0cm]
+    \centering
+    \textsc{\LARGE \kaishu{姓名\ :\ 强徽东}}\\[0.5cm]
+    \textsc{\LARGE \kaishu{学号\ :\ 2411764 }}\\[0.5cm]
+    \textsc{\LARGE \kaishu{专业\ :\ 计算机科学与技术}}\\[0.5cm]
+    
+    \vfill
+    {\Large \today}
+    \end{center}
+\end{titlepage}
+
+\renewcommand {\thefigure}{\thesection{}.\arabic{figure}}%图片按章标号
+\renewcommand{\figurename}{图}
+\renewcommand{\contentsname}{目录}  
+\cfoot{\thepage\ of \pageref{LastPage}}%当前页 of 总页数
+
+
+% 生成目录
+\clearpage
+\tableofcontents
+\newpage
+
+%--------------------------NTT Report--------------------------------
+\section{实验目的}
+学习并掌握GPU编程，深入了解相关内容并对NTT算法进行GPU优化，以及进行性能测试。
+
+
+\section{实验环境}
+
+\begin{table}[H]
+  \centering
+  \caption{软硬件环境}
+  \begin{tabular}{ll}
+    \toprule
+    项目 & 配置 \\
+    \midrule
+    CPU & AMD Ryzen AI MAX+ PRO 395 \\
+    GPU & AMD Radeon 8060S Graphics（gfx1151）\\
+    GPU 架构 & RDNA 3.5 \\
+    计算单元 & 40 CU（HIP 属性接口可按 20 WGP 报告）\\
+    Wavefront & 32 \\
+    每个 CU 的 SIMD 数 & 2 \\
+    每个 workgroup 的最大线程数 & 1024 \\
+    每个 CU 的 LDS & 64 KB \\
+    HIP 版本 & 7.13.99004-3309c6114a \\
+    编译器 & AMD Clang 23.0.0git \\
+    编译参数 & \texttt{hipcc -O3 -std=c++17} \\
+    性能分析工具 & rocprofv3 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{算法原理}
+
+\subsection{数论变换}
+
+NTT 是在有限域上执行的离散傅里叶变换。本实验选用
+\[
+q=998244353=119\times 2^{23}+1,
+\qquad g=3,
+\]
+其中 $g$ 是模 $q$ 的原根。由于 $q-1$ 含有因子 $2^{23}$，本实验可处理的
+radix-2 NTT 最大长度为 $2^{23}$。
+
+对于长度为 $N$ 的变换，$N$ 次单位根为
+\[
+\omega_N=g^{(q-1)/N}\bmod q.
+\]
+每个蝶形运算为
+\begin{align}
+u &= a_i,\\
+v &= a_{i+L/2}\omega_L^j \bmod q,\\
+a_i &= (u+v)\bmod q,\\
+a_{i+L/2} &= (u-v+q)\bmod q,
+\end{align}
+其中 $L$ 为当前阶段的蝶形长度。逆变换使用逆单位根，并在最后乘以
+$N^{-1}\bmod q$。
+
+\subsection{GPU 并行映射}
+
+首先在 GPU 上执行位逆序置换。随后每个线程负责一个蝶形。设线程全局编号为
+$t$，则线程对应的数据位置为
+\begin{align}
+h &= L/2,\\
+\text{group} &= \lfloor t/h\rfloor,\\
+j &= t\bmod h,\\
+i_0 &= \text{group}\cdot L+j,\\
+i_1 &= i_0+h.
+\end{align}
+
+同一阶段的蝶形彼此独立，因此可以并行执行。不同 workgroup 之间不存在可由块内
+同步函数实现的全局屏障，所以普通版本每个 NTT 阶段启动一次 kernel。对于
+$N=2^{20}$，一次正变换包含 20 次蝶形 kernel。
+
+\subsection{旋转因子存储}
+
+CPU 预先生成正变换和逆变换旋转因子表，然后通过 \texttt{hipMemcpy} 一次性复制
+到 GPU 全局内存。第 $L$ 阶段第 $j$ 个蝶形使用的表下标为
+\[
+j\frac{N}{L}.
+\]
+这种方法避免了每个线程在 kernel 中执行模幂运算。旋转因子的生成时间和首次
+主机到设备传输时间不计入纯 kernel 时间。
+
+\subsection{Barrett 规约}
+
+预计算
+\[
+\mu=\left\lfloor\frac{2^{64}}{q}\right\rfloor.
+\]
+对于 $x=ab$，利用 64 位乘法高位近似商：
+\begin{align}
+\widehat{m} &= \left\lfloor\frac{x\mu}{2^{64}}\right\rfloor,\\
+r &= x-\widehat{m}q.
+\end{align}
+最后通过条件减法将 $r$ 调整到 $[0,q)$。GPU 使用高位乘法指令
+\texttt{\_\_umul64hi}，避免运行时整数除法。
+
+\subsection{Montgomery 规约}
+
+令 $R=2^{32}$，并预计算
+\[
+q'=-q^{-1}\bmod R.
+\]
+对于 $t=ab$，Montgomery 规约为
+\begin{align}
+m &= (t\bmod R)q'\bmod R,\\
+u &= \frac{t+mq}{R}.
+\end{align}
+若 $u\ge q$，再减去一次 $q$。输入数据、旋转因子和 $N^{-1}$ 都提前转换为
+Montgomery 形式 $xR\bmod q$，整个 NTT 始终在 Montgomery 域中计算，最后统一
+转换回普通表示。这样可以避免在每次模乘前后进行域转换。
+
+\subsection{LDS 分块}
+
+根据 workgroup 测试结果，分块版本采用 128 个线程和 256 个元素的 tile。每个
+线程负责两个元素的加载或一组蝶形，将前 8 个阶段（$L=2,4,\ldots,256$）融合
+到一个 kernel，并在 LDS 中完成。阶段之间使用
+\texttt{\_\_syncthreads()}。从 $L=512$ 开始，蝶形会跨越 tile，仍需使用全局
+内存和独立 kernel。
+
+\section{程序实现与正确性验证}
+
+程序包含以下版本：
+
+\begin{enumerate}
+  \item CPU 串行 NTT；
+  \item GPU 运行时 \texttt{\% mod} baseline；
+  \item GPU Barrett 规约版本；
+  \item GPU Montgomery 规约版本；
+  \item GPU Montgomery + LDS tiled 版本。
+\end{enumerate}
+
+\subsection{三部分优化的核心代码}
+
+\subsubsection{优化一：预处理旋转因子}
+
+旋转因子只与模数、变换长度和变换方向有关。程序在 CPU 上一次性生成正、逆变换
+旋转因子表，随后复制到 GPU 全局内存。kernel 通过下标直接查表，从而避免每个
+线程在每个阶段重复执行模幂运算。
+
+\begin{lstlisting}[language=C++,caption={旋转因子预计算与传输}]
+std::vector<u32> make_twiddles(int n, bool inverse) {
+    std::vector<u32> twiddles(n / 2);
+    u32 omega = mod_pow(ROOT, (MOD - 1) / n);
+
+    if (inverse) {
+        omega = mod_pow(omega, MOD - 2);
+    }
+
+    twiddles[0] = 1;
+    for (int i = 1; i < n / 2; ++i) {
+        twiddles[i] = static_cast<u32>(
+            static_cast<u64>(twiddles[i - 1])
+            * omega % MOD
+        );
+    }
+    return twiddles;
+}
+
+std::vector<u32> forward_twiddles =
+    make_twiddles(N, false);
+std::vector<u32> inverse_twiddles =
+    make_twiddles(N, true);
+
+hipMalloc(
+    &device_forward_twiddles,
+    forward_twiddles.size() * sizeof(u32)
+);
+hipMemcpy(
+    device_forward_twiddles,
+    forward_twiddles.data(),
+    forward_twiddles.size() * sizeof(u32),
+    hipMemcpyHostToDevice
+);
+\end{lstlisting}
+
+对于长度为 \texttt{length} 的阶段，线程使用
+\texttt{j * (n / length)} 作为旋转因子下标。正、逆变换分别保存一张表，避免在
+GPU 上求逆。预处理和首次传输发生在计时区间之外，正式性能表测量 steady-state
+NTT kernel 时间。
+
+\subsubsection{优化二：蝶形运算并行化}
+
+长度为 $N$ 的每个阶段包含 $N/2$ 个互不冲突的蝶形。程序将一个蝶形映射给一个
+GPU 线程，使用一维 grid 覆盖所有蝶形。线程先计算所在蝶形组和组内偏移，再完成
+两次读、一次模乘、模加和模减。
+
+\begin{lstlisting}[language=C++,caption={一个线程负责一个蝶形运算}]
+__global__ void butterfly_kernel(
+    u32* data,
+    const u32* twiddles,
+    int n,
+    int length,
+    u32 mod
+) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= n / 2) return;
+
+    int half = length / 2;
+    int group = tid / half;
+    int j = tid % half;
+    int first = group * length + j;
+    int second = first + half;
+    int twiddle_index = j * (n / length);
+
+    u32 left = data[first];
+    u32 right = static_cast<u32>(
+        static_cast<u64>(data[second])
+        * twiddles[twiddle_index] % mod
+    );
+
+    u32 sum = left + right;
+    if (sum >= mod) sum -= mod;
+
+    u32 difference =
+        left >= right ? left - right
+                      : left + mod - right;
+
+    data[first] = sum;
+    data[second] = difference;
+}
+\end{lstlisting}
+
+不同阶段存在数据依赖，因此普通版本每个阶段启动一次 kernel，以 kernel 边界完成
+全局同步。workgroup 大小通过实测选择，而不是直接使用硬件允许的最大值。
+
+\begin{lstlisting}[language=C++,caption={逐阶段启动并行蝶形 kernel}]
+int butterflies = n / 2;
+int grid = (butterflies + BLOCK_SIZE - 1)
+           / BLOCK_SIZE;
+
+for (int length = 2; length <= n; length <<= 1) {
+    hipLaunchKernelGGL(
+        butterfly_kernel,
+        dim3(grid), dim3(BLOCK_SIZE), 0, 0,
+        device_data, device_twiddles,
+        n, length, MOD
+    );
+}
+\end{lstlisting}
+
+实验还实现了 LDS tiled 版本：以 128 个线程处理 256 个元素，将前 8 个阶段融合
+到一个 workgroup 内。该版本验证正确，但同步和 LDS 搬运开销使其在本设备上慢于
+普通并行版本。
+
+\subsubsection{优化三：Barrett 与 Montgomery 模乘}
+
+Barrett 规约预计算 $\mu=\lfloor 2^{64}/q\rfloor$，使用乘法高位近似商，避免
+运行时整数除法。代码如下。
+
+\begin{lstlisting}[language=C++,caption={Barrett 模乘}]
+constexpr u64 BARRETT_MU =
+    18446744073709551615ULL / MOD;
+
+__device__ __forceinline__
+u32 barrett_mul(u32 left, u32 right) {
+    u64 product = static_cast<u64>(left) * right;
+
+    u64 quotient = __umul64hi(
+        static_cast<unsigned long long>(product),
+        static_cast<unsigned long long>(BARRETT_MU)
+    );
+
+    u64 remainder =
+        product - quotient * static_cast<u64>(MOD);
+
+    if (remainder >= MOD) remainder -= MOD;
+    return static_cast<u32>(remainder);
+}
+\end{lstlisting}
+
+Montgomery 规约使用 $R=2^{32}$，预计算 $-q^{-1}\bmod R$，通过低 32 位乘法和
+右移完成规约。
+
+\begin{lstlisting}[language=C++,caption={Montgomery 规约与模乘}]
+constexpr u32 inverse_mod_2_32(u32 value) {
+    u32 inverse = 1;
+    for (int i = 0; i < 5; ++i) {
+        inverse *= 2U - value * inverse;
+    }
+    return inverse;
+}
+
+constexpr u32 MONT_NINV =
+    0U - inverse_mod_2_32(MOD);
+constexpr u32 MONT_R_MOD =
+    static_cast<u32>((1ULL << 32) % MOD);
+
+__host__ __device__ __forceinline__
+u32 montgomery_reduce(u64 value) {
+    u32 m = static_cast<u32>(value) * MONT_NINV;
+    u64 reduced =
+        (value + static_cast<u64>(m) * MOD) >> 32;
+
+    if (reduced >= MOD) reduced -= MOD;
+    return static_cast<u32>(reduced);
+}
+
+__host__ __device__ __forceinline__
+u32 montgomery_mul(u32 left, u32 right) {
+    return montgomery_reduce(
+        static_cast<u64>(left) * right
+    );
+}
+\end{lstlisting}
+
+为避免域转换抵消优化收益，输入数据和旋转因子在 NTT 开始前统一转换为
+$xR\bmod q$，整个正、逆变换均保留在 Montgomery 域中，最终仅转换一次。
+
+\begin{lstlisting}[language=C++,caption={Montgomery 域的批量预转换与最终转换}]
+u32 to_montgomery(u32 value) {
+    return static_cast<u32>(
+        static_cast<u64>(value) * MONT_R_MOD % MOD
+    );
+}
+
+for (int i = 0; i < N; ++i) {
+    montgomery_input[i] = to_montgomery(input[i]);
+}
+for (u32& value : forward_twiddles) {
+    value = to_montgomery(value);
+}
+
+// Convert only after the complete NTT has finished.
+for (u32& value : gpu_result) {
+    value = montgomery_reduce(value);
+}
+\end{lstlisting}
+
+在蝶形 kernel 中，只需将普通模乘替换为对应的 Barrett 或 Montgomery 设备函数。
+线程映射和数据布局保持不变，因此能够单独比较模乘策略的影响。
+
+所有 HIP 调用均检查返回值，并在 kernel 启动后检查
+\texttt{hipGetLastError()}。GPU 时间使用 HIP Event 测量。测试采用固定随机种子，
+保证不同版本处理相同输入。
+
+CPU 小规模测试的结果为
+\begin{verbatim}
+Forward NTT:
+36 894301004 346334868 201631260 998244349 796613085 651909477 103943341
+Inverse NTT:
+1 2 3 4 5 6 7 8
+Verification: PASSED
+\end{verbatim}
+
+在 $N=2^{20}$ 时，普通取模、Barrett、Montgomery 和 LDS tiled 版本均满足：
+\begin{itemize}
+  \item GPU 正变换结果与 CPU 逐元素一致；
+  \item GPU 正变换后执行逆变换能够恢复原始输入；
+  \item 独立模乘测试中三种 GPU 实现均与 CPU 参考结果一致。
+\end{itemize}
+
+\section{实验结果与分析}
+
+\subsection{Workgroup 大小}
+
+固定 $N=2^{20}$，使用 Montgomery 版本测试不同 workgroup 大小，每种配置运行
+10 次。
+
+\begin{table}[H]
+  \centering
+  \caption{Workgroup 大小对正变换时间的影响}
+  \begin{tabular}{rrr}
+    \toprule
+    Workgroup 大小 & 平均时间/ms & 标准差/ms \\
+    \midrule
+    64   & 1.2249 & 0.0578 \\
+    128  & 1.1147 & 0.0231 \\
+    256  & 1.1331 & 0.0317 \\
+    512  & 1.1773 & 0.0457 \\
+    1024 & 1.1988 & 0.0359 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+128 线程取得最佳结果。较小 workgroup 的并行度不足，而较大 workgroup 会降低
+调度灵活性和活跃 workgroup 数量。由于设备使用 wave32，所有测试值均为
+wavefront 大小的整数倍。
+
+\subsection{完整 NTT 的模乘与 LDS 优化}
+
+固定 $N=2^{20}$，预热 2 次后交错运行各版本 10 次，结果如下。
+
+\begin{table}[H]
+  \centering
+  \caption{完整 NTT 的不同 GPU 实现}
+  \footnotesize
+  \setlength{\tabcolsep}{2pt}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{lrrrrr}
+    \toprule
+    方法 & 正变换/ms & 标准差 & 逆变换/ms & 标准差 & 正变换相对 baseline \\
+    \midrule
+    Runtime modulo   & 1.1523 & 0.0295 & 0.7766 & 0.0022 & 1.000 \\
+    Barrett          & 1.1348 & 0.0416 & 0.7522 & 0.0024 & 1.015 \\
+    Montgomery       & 1.1506 & 0.0445 & 0.7504 & 0.0025 & 1.002 \\
+    Montgomery tiled & 1.2047 & 0.0555 & 0.7791 & 0.0037 & 0.957 \\
+    \bottomrule
+  \end{tabular}
+  }
+\end{table}
+
+完整正变换中 Barrett 和 Montgomery 的提升较小。原因是完整 NTT 不仅包含模乘，
+还包含位逆序、旋转因子读取、全局内存读写和 20 次阶段 kernel 启动。模乘只占
+总时间的一部分，因此算术优化被其他开销稀释。
+
+LDS tiled 版本比 baseline 慢约 $4.3\%$。虽然它把前 8 个阶段融合为一次 kernel，
+但增加了 LDS 搬运和多次 workgroup 屏障。对于当前设备和问题规模，这些开销超过
+了减少 kernel 启动次数带来的收益。因此实验保留该结果，不将分块本身等同于必然
+加速。
+
+\subsection{独立模乘性能}
+
+为了隔离模乘开销，使用 $N=2^{20}$ 个元素，每个线程连续执行 32 次模乘。GPU
+预热 2 次并测量 10 次。
+
+\begin{table}[H]
+  \centering
+  \caption{独立模乘性能}
+  \begin{tabular}{lrrrr}
+    \toprule
+    方法 & 平均时间/ms & 标准差/ms & 相对 CPU & 相对 GPU \texttt{\%} \\
+    \midrule
+    CPU baseline     & 41.9277 & --     & 1.000   & -- \\
+    Runtime modulo   & 0.4185  & 0.0006 & 100.181 & 1.000 \\
+    Barrett          & 0.1941  & 0.0095 & 215.990 & 2.156 \\
+    Montgomery       & 0.0782  & 0.0022 & 535.983 & 5.350 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      ybar,
+      width=11cm,
+      height=6cm,
+      ylabel={Kernel 时间/ms},
+      symbolic x coords={Runtime,Barrett,Montgomery},
+      xtick=data,
+      nodes near coords,
+      ymin=0,
+      bar width=18pt
+    ]
+      \addplot coordinates {
+        (Runtime,0.4185)
+        (Barrett,0.1941)
+        (Montgomery,0.0782)
+      };
+    \end{axis}
+  \end{tikzpicture}
+  \caption{三种 GPU 模乘方法的独立 kernel 时间}
+\end{figure}
+
+Barrett 和 Montgomery 相对运行时取模分别加速 $2.156$ 倍和 $5.350$ 倍，证明两种
+规约可以有效消除 GPU 上昂贵的整数除法。Montgomery 测试的纯 kernel 时间不包含
+输入和输出的域转换；这是 steady-state NTT 的合理口径，因为数据和旋转因子在整个
+变换期间始终保留在 Montgomery 域中。
+
+\subsection{不同 NTT 规模}
+
+表 \ref{tab:scaling} 给出了不同规模下 CPU 与 GPU 正变换的时间。每个规模运行
+5 次并取平均值。
+
+\begin{table}[H]
+  \centering
+  \caption{不同规模的 NTT 性能}
+  \label{tab:scaling}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{rrrrrr}
+    \toprule
+    $N$ & CPU/ms & Runtime/ms & Barrett/ms & Montgomery/ms & CPU/Montgomery \\
+    \midrule
+    1,024     & 0.018   & 0.4968 & 0.4568 & 0.5222 & 0.04 \\
+    16,384    & 0.374   & 0.5737 & 0.5914 & 0.5452 & 0.69 \\
+    262,144   & 9.064   & 0.7014 & 0.6269 & 0.5815 & 15.59 \\
+    1,048,576 & 31.053  & 1.1446 & 1.1539 & 1.1648 & 26.66 \\
+    4,194,304 & 124.380 & 8.0227 & 7.9591 & 7.9520 & 15.64 \\
+    8,388,608 & 271.823 & 23.8862 & 23.6676 & 23.6723 & 11.48 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}
+    \begin{loglogaxis}[
+      width=13cm,
+      height=8cm,
+      xlabel={$N$},
+      ylabel={时间/ms},
+      grid=both,
+      legend pos=north west
+    ]
+      \addplot+[mark=*] coordinates {
+        (1024,0.018) (16384,0.374) (262144,9.064)
+        (1048576,31.053) (4194304,124.380) (8388608,271.823)
+      };
+      \addlegendentry{CPU}
+      \addplot+[mark=square*] coordinates {
+        (1024,0.4968) (16384,0.5737) (262144,0.7014)
+        (1048576,1.1446) (4194304,8.0227) (8388608,23.8862)
+      };
+      \addlegendentry{GPU Runtime modulo}
+      \addplot+[mark=triangle*] coordinates {
+        (1024,0.4568) (16384,0.5914) (262144,0.6269)
+        (1048576,1.1539) (4194304,7.9591) (8388608,23.6676)
+      };
+      \addlegendentry{GPU Barrett}
+      \addplot+[mark=diamond*] coordinates {
+        (1024,0.5222) (16384,0.5452) (262144,0.5815)
+        (1048576,1.1648) (4194304,7.9520) (8388608,23.6723)
+      };
+      \addlegendentry{GPU Montgomery}
+    \end{loglogaxis}
+  \end{tikzpicture}
+  \caption{CPU 与 GPU NTT 的规模扩展性}
+\end{figure}
+
+当 $N\le 2^{14}$ 时，GPU kernel 启动开销占主导，CPU 更快。从 $N=2^{18}$ 开始，
+GPU 获得明显优势；$N=2^{20}$ 时取得本组测试中的最大加速比 $26.66$。当规模继续
+增大时，工作集超出较高级缓存，位逆序和跨步访存的代价增加，加速比下降到
+$15.64$ 和 $11.48$。
+
+\subsection{rocprofv3 分析}
+
+对 $N=2^{20}$ 的 Montgomery 正、逆变换执行 kernel trace，结果如下。
+
+\begin{table}[H]
+  \centering
+  \caption{rocprofv3 kernel 统计}
+  \begin{tabular}{lrrrr}
+    \toprule
+    Kernel & 调用次数 & 总时间/ns & 平均时间/ns & 占比 \\
+    \midrule
+    \texttt{butterfly\_kernel} & 40 & 1,148,473 & 28,711.8 & 78.90\% \\
+    \texttt{bit\_reverse\_kernel} & 2 & 296,116 & 148,058.0 & 20.34\% \\
+    \texttt{scale\_kernel} & 1 & 10,981 & 10,981.0 & 0.75\% \\
+    \midrule
+    合计 & 43 & 1,455,570 & -- & 100\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+40 次蝶形调用分别来自正变换和逆变换的 20 个阶段。蝶形 kernel 占总 kernel 时间的
+$78.90\%$，是主要热点；位逆序虽然只调用两次，但占 $20.34\%$，也是后续优化的
+重要方向。性能分析工具本身会引入额外开销，因此该表用于分析占比，正式性能表使用
+未开启 profiler 时的 HIP Event 数据。
+
+\section{误差来源与实验局限}
+
+\begin{enumerate}
+  \item GPU 表格主要报告纯 kernel 时间，不包含首次 H2D/D2H 传输、旋转因子生成、
+        设备内存分配和 HIP 上下文初始化；
+  \item 独立 Montgomery 模乘不包含进入和退出 Montgomery 域的时间，反映的是 NTT
+        steady-state 场景；
+  \item CPU baseline 为单线程实现，未使用 SIMD 或多线程；
+  \item 本实验固定模数为 998244353,较为单一；
+  \item 完整 NTT 的模乘差异较小，部分差异与标准差处于同一数量级，因此不应仅凭
+        单次测试宣称显著加速。
+\end{enumerate}
+
+\section{结论}
+
+本实验完成了 CPU 和 HIP GPU 上的 NTT，并实现了旋转因子 GPU 查表、
+Barrett 规约、Montgomery 规约和 LDS 分块。所有 GPU 版本均通过 CPU 对照和
+正逆变换恢复测试。
+
+在独立模乘场景中，Barrett 和 Montgomery 相对 GPU 运行时取模分别取得
+$2.156$ 倍和 $5.350$ 倍加速，说明消除整数除法十分有效。在完整 NTT 中，访存、
+位逆序和 kernel 启动占据较大比例，模乘优化带来的整体提升有限。GPU 对中大规模
+NTT 仍表现出明显优势，在 $N=2^{20}$ 时相对单线程 CPU 达到 $26.66$ 倍加速。
+
+LDS tiled 版本在当前实现中下降约 $4.3\%$，表明共享内存优化必须综合考虑同步、
+数据搬运和 occupancy，而不能只考虑减少全局内存访问或 kernel 次数。rocprofv3
+进一步表明蝶形计算和位逆序分别占约 $78.90\%$ 和 $20.34\%$，后续可以考虑使用
+Stockham NTT 消除独立位逆序、使用 wave shuffle 融合小规模阶段，以及针对不同
+$N$ 自动选择 tile 和 workgroup 配置。
+\end{document}
+

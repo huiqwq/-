@@ -1,0 +1,621 @@
+\documentclass[a4paper]{article}
+
+\input{style/ch_xelatex.tex}
+\input{style/scala.tex}
+
+\usepackage{ctex}
+\usepackage{graphicx}
+\usepackage{color,framed}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{amssymb}
+\usepackage{enumerate}
+\usepackage{xcolor}
+\usepackage{bm}
+\usepackage{lastpage}
+\usepackage{fancyhdr}
+\usepackage{tabularx}
+\usepackage{geometry}
+\usepackage{graphics}
+\usepackage{subfigure}
+\usepackage{float}
+\usepackage{pdfpages}
+\usepackage{pgfplots}
+\pgfplotsset{width=10cm,compat=1.9}
+\usepackage{multirow}
+\usepackage{footnote}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+
+\floatname{algorithm}{Algorithm}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+
+\lstset{
+breaklines,
+basicstyle=\small\ttfamily,
+escapeinside=``,
+keywordstyle=\color{blue!70}\bfseries,
+commentstyle=\color{red!50!green!50!blue!50},
+stringstyle=\ttfamily,
+extendedchars=false,
+linewidth=\textwidth,
+numbers=left,
+numberstyle=\tiny\color{blue!50},
+frame=trbl,
+rulesepcolor=\color{red!20!green!20!blue!20}
+}
+
+\geometry{a4paper,left=2.3cm,right=2.3cm,top=2.7cm,bottom=2.7cm}
+\pagestyle{fancy}
+\lhead{\kaishu \leftmark}
+\rhead{\kaishu 并行程序设计实验报告}
+\lfoot{}
+\cfoot{\thepage\ of \pageref{LastPage}}
+\rfoot{}
+\renewcommand{\headrulewidth}{0.1pt}
+\renewcommand{\footrulewidth}{0pt}
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\newcommand{\HRulegrossa}{\rule{\linewidth}{1.2mm}}
+\setlength{\textfloatsep}{10mm}
+
+\begin{document}
+\renewcommand{\contentsname}{目录}
+\renewcommand{\appendixname}{附录}
+\renewcommand{\appendixpagename}{附录}
+\renewcommand{\refname}{参考文献}
+\renewcommand{\figurename}{图}
+\renewcommand{\tablename}{表}
+\renewcommand{\today}{\number\year 年 \number\month 月 \number\day 日}
+
+\begin{titlepage}
+    \begin{center}
+    \includegraphics[width=0.8\textwidth]{NKU.png}\\[1cm]
+    \vspace{20mm}
+        \textbf{\huge\textbf{\kaishu{计算机学院}}}\\[0.5cm]
+        \textbf{\huge{\kaishu{并行程序设计实验报告}}}\\[2.3cm]
+        \textbf{\Huge\textbf{\kaishu{NTT 的 MPI 并行化实验}}}
+
+        \vspace{\fill}
+
+    \centering
+    \textsc{\LARGE \kaishu{姓名\ :\ 强徽东}}\\[0.5cm]
+    \textsc{\LARGE \kaishu{学号\ :\ 2411764}}\\[0.5cm]
+    \textsc{\LARGE \kaishu{专业\ :\ 计算机科学与技术}}\\[0.5cm]
+
+    \vfill
+    {\Large \today}
+    \end{center}
+\end{titlepage}
+
+\renewcommand {\thefigure}{\thesection{}.\arabic{figure}}
+\renewcommand{\figurename}{图}
+\renewcommand{\contentsname}{目录}
+
+\clearpage
+\tableofcontents
+\newpage
+
+\section{实验背景与目标}
+
+本实验选题为数论变换 NTT（Number Theoretic Transform）的 MPI 并行化。NTT 常用于整数或多项式卷积计算，可以将朴素卷积的 $O(n^2)$ 复杂度降低到 $O(n\log n)$。前序实验已经完成了 Pthread、OpenMP、SIMD 以及 CRT 相关优化，本次实验在原有代码框架基础上引入 MPI，重点分析多进程任务划分和通信同步对性能的影响。
+
+给定两个长度为 $n$ 的多项式 $A(x)$ 和 $B(x)$，实验目标是在模数 $P$ 下计算：
+\[
+C(x)=A(x)B(x)\pmod P
+\]
+
+本次实验主要完成以下工作：
+\begin{enumerate}
+    \item 在原有 OpenMP、SIMD、CRT 代码框架上实现 MPI 并行版本；
+    \item 实现 CRT 模数级 MPI 并行和 NTT stage 级 MPI 并行两类任务划分；
+    \item 在 stage 级 MPI 并行基础上加入 Barrett 规约优化；
+    \item 在 Barrett 版本基础上实现 DIF/DIT 流程优化，减少显式位逆序置换；
+    \item 在实现的第一个NTT版本的基础上也实现DIF/DIT优化；
+    \item 通过 qsub 提交到 ARM 服务器运行，比较不同版本的正确性和性能。
+\end{enumerate}
+
+\section{实验环境}
+
+实验程序在 ARM 平台服务器上运行，服务器已经安装 MPI 环境。根据实验要求，MPI 程序需要通过 \texttt{qsub\_mpi.sh} 提交，不能直接使用普通 \texttt{test.sh}。程序编译使用 \texttt{mpic++}，运行通过 \texttt{mpiexec} 启动。
+
+\begin{table}[H]
+  \centering
+  \caption{实验环境与运行方式}
+  \label{tab:env}
+  \begin{tabular}{l l}
+    \toprule
+    项目 & 配置或说明 \\
+    \midrule
+    实验平台 & ARM 服务器 \\
+    操作系统 & Linux / aarch64 环境 \\
+    并行接口 & MPI、OpenMP \\
+    编译器 & \texttt{mpic++} \\
+    编译参数 & \texttt{-std=c++17 -O3 -fopenmp} \\
+    提交方式 & \texttt{qsub qsub\_mpi.sh} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+编译命令如下：
+\begin{lstlisting}[language=bash]
+mpic++ -std=c++17 -O3 -fopenmp main.cc -o main
+\end{lstlisting}
+
+qsub 脚本中的核心运行命令如下：
+\begin{lstlisting}[language=bash]
+/usr/local/bin/mpiexec -np 4 -machinefile $PBS_NODEFILE /home/${USER}/main 0 4 1
+/usr/local/bin/mpiexec -np 4 -machinefile $PBS_NODEFILE /home/${USER}/main 4 4 5
+\end{lstlisting}
+
+其中第一条命令用于测试 $0$ 到 $4$ 号所有样例，验证正确性；第二条命令重点测试第 $4$ 个大规模样例，并重复运行 5 次以观察运行时间稳定性。
+
+\section{算法基础}
+
+\subsection{NTT 基本流程}
+
+NTT 将多项式从系数表示转换到点值表示。两个多项式分别变换后，在点值域中逐点相乘，再通过逆 NTT 转换回系数表示：
+\[
+A \xrightarrow{\mathrm{NTT}} \hat{A},\quad
+B \xrightarrow{\mathrm{NTT}} \hat{B}
+\]
+\[
+\hat{C}[i]=\hat{A}[i]\hat{B}[i]\pmod P
+\]
+\[
+C \xleftarrow{\mathrm{INTT}} \hat{C}
+\]
+
+NTT 的核心是分层 butterfly 计算。对于长度为 \texttt{len} 的一层，设 \texttt{half=len/2}，典型 butterfly 操作为：
+\[
+x=f[base+k]
+\]
+\[
+y=f[base+k+half]\cdot w_k\pmod p
+\]
+\[
+f[base+k]=x+y\pmod p
+\]
+\[
+f[base+k+half]=x-y\pmod p
+\]
+
+同一层中不同 butterfly block 之间互不依赖，可以并行；不同层之间存在严格依赖，必须同步后才能进入下一层。
+
+\subsection{CRT 大模数处理}
+
+实验数据中存在较大的目标模数，例如：
+\[
+P=1337006139375617
+\]
+该模数不适合直接作为单一 NTT 模数。为支持大模数卷积，程序保留前序实验中的四模数 CRT 框架。选取四个 NTT 友好小模数：
+\[
+998244353,\quad 1004535809,\quad 469762049,\quad 1224736769
+\]
+分别在每个小模数下计算卷积结果，再通过中国剩余定理恢复到目标模数 $P$ 下。
+
+四模数 CRT 的整体流程为：
+\begin{enumerate}
+    \item 对每个小模数 $p_i$，将输入系数映射到模 $p_i$ 下；
+    \item 分别执行 NTT、点值乘法和逆 NTT，得到 residue 数组；
+    \item 对每个输出系数位置，使用 CRT 合并四个 residue；
+    \item 将恢复出的整数结果对目标模数 $P$ 取模。
+\end{enumerate}
+
+\section{代码版本与优化路线}
+
+本实验共保存五个主要版本。报告按照两类 MPI 优化思路组织，而不是简单按文件生成顺序罗列：第一类是 CRT 模数级任务并行，对应 v1 和 v5；第二类是 NTT butterfly stage 级并行，对应 v2、v3 和 v4。
+
+\begin{table}[H]
+  \centering
+  \caption{MPI NTT 五个版本说明}
+  \label{tab:versions}
+  \resizebox{\textwidth}{!}{
+  \begin{tabular}{l l p{9cm}}
+    \toprule
+    版本 & 文件名 & 主要特点 \\
+    \midrule
+    v1 & \texttt{main\_mpi\_crt\_modparallel\_v1.cc} & 第一类 MPI 方案：CRT 模数级任务并行。四个小模数 NTT 按 \texttt{mod\_id \% size} 分给不同 MPI 进程，rank 0 读取输入、广播数据、收集 residue 并完成 CRT 合并。 \\
+    v5 & \texttt{main\_mpi\_crt\_modparallel\_difdit\_openmp\_simd\_v5.cc} & v1 的进一步优化：MPI 通信结构保持不变，在每个进程内部加入 DIF/DIT、OpenMP 和 SIMD，使低通信的模数级 MPI 与进程内细粒度并行结合。 \\
+    v2 & \texttt{main\_mpi\_stage\_v2.cc} & 第二类 MPI 方案：NTT butterfly stage 级并行。每个小模数 NTT 由所有 MPI 进程共同完成，每层 butterfly block 按 rank 分配，每层后使用 \texttt{MPI\_Allgatherv} 同步。 \\
+    v3 & \texttt{main\_mpi\_stage\_barrett\_v3.cc} & v2 的计算端优化：在 stage 级 MPI 框架中加入 Barrett 规约，使用乘法、移位和条件减法替代高频模乘中的普通取模。 \\
+    v4 & \texttt{main\_mpi\_stage\_barrett\_difdit\_v4.cc} & v3 的流程优化：继续保留 stage 级 MPI 通信方式和 Barrett 规约，并采用 DIF 正变换与 DIT 逆变换减少显式位逆序开销。 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\section{MPI 编程模型与通信设计}
+
+MPI（Message Passing Interface）采用多进程并行模型。程序启动后，每个进程都执行同一份可执行文件，但通过 \texttt{MPI\_Comm\_rank} 得到不同的 rank，通过 \texttt{MPI\_Comm\_size} 得到总进程数，从而决定自己负责的数据范围和计算任务。本实验中的 MPI 程序均使用 \texttt{mpic++} 编译，并通过 qsub 作业脚本中的 \texttt{mpiexec -np} 启动。
+
+与 OpenMP 不同，MPI 进程之间默认不共享内存。rank 0 读到的输入数组不会自动出现在其他 rank 中，必须通过显式通信传递。对于 NTT 实验，通信方式主要分为三类：
+\begin{enumerate}
+    \item \textbf{广播输入}：rank 0 读取样例后，使用 \texttt{MPI\_Bcast} 将 $n$、目标模数 $P$、输入数组 $a$ 和 $b$ 发送给所有进程，保证各进程拥有相同初始数据；
+    \item \textbf{点对点收集}：在 CRT 模数级并行中，非 0 进程完成自己负责的小模数 NTT 后，通过 \texttt{MPI\_Send} 把 residue 数组发回 rank 0，rank 0 用 \texttt{MPI\_Recv} 接收；
+    \item \textbf{集体同步}：在 butterfly stage 级并行中，同一层 NTT 被拆给多个进程计算。由于下一层依赖完整数组，每层结束后必须通过 \texttt{MPI\_Allgatherv} 汇总所有进程的片段，使每个进程重新获得完整的数组视图。
+\end{enumerate}
+
+因此，本实验的 MPI 优化核心不是简单增加进程数，而是选择合适的任务粒度。粗粒度划分通信少，但最多只能利用有限数量的任务；细粒度划分可以让更多进程参与同一个 NTT，但会引入频繁同步。后续五个版本正是围绕这两类思路展开。
+
+\section{两类 MPI 优化形式及版本实现}
+
+\subsection{第一类：CRT 模数级任务并行}
+
+大模数卷积不能直接在目标模数 $P=1337006139375617$ 下进行普通 NTT，因此原有代码采用四个 NTT 友好的小模数分别计算，再用 CRT 合并结果。四个小模数下的 NTT 互相独立，这是最自然的 MPI 任务划分点。
+
+\subsubsection{v1：四个进程分别执行四个小模数 NTT}
+
+v1 将 MPI 并行加在 CRT 外层。rank 0 负责读取输入和标准答案，然后通过 \texttt{MPI\_Bcast} 将数据广播给所有进程。每个小模数任务的归属由
+\begin{lstlisting}[language=C++]
+owner = mod_id % size;
+\end{lstlisting}
+确定。当使用 \texttt{np=4} 时，四个小模数刚好分别由 rank 0、rank 1、rank 2 和 rank 3 负责。每个 rank 在本地独立完成如下流程：
+\[
+A_i \xrightarrow{NTT} \hat{A_i},\quad
+B_i \xrightarrow{NTT} \hat{B_i},\quad
+\hat{C_i}[k]=\hat{A_i}[k]\hat{B_i}[k]\pmod {p_i},\quad
+C_i \xleftarrow{INTT} \hat{C_i}
+\]
+其中 $p_i$ 是该 rank 负责的小模数。
+
+v1 的通信过程可以概括为“开始一次广播，结束一次收集”。非 0 进程完成 residue 数组后，将其发送给 rank 0；rank 0 接收全部四个 residue 后执行 CRT 合并。核心结构如下：
+\begin{lstlisting}[language=C++,title=v1 的 CRT 模数级 MPI 划分]
+MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+MPI_Bcast(a.data(), n, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+MPI_Bcast(b.data(), n, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+
+for (int mod_id = 0; mod_id < CRT_CNT; ++mod_id) {
+    int owner = mod_id % size;
+    if (rank == owner) {
+        vector<u64> local;
+        multiply_mod_ntt(a, b, local, n, CRT_MODS[mod_id]);
+        if (rank == 0) residues[mod_id].swap(local);
+        else MPI_Send(local.data(), result_len, MPI_UINT64_T,
+                      0, 100 + mod_id, MPI_COMM_WORLD);
+    }
+    if (rank == 0 && owner != 0) {
+        MPI_Recv(residues[mod_id].data(), result_len, MPI_UINT64_T,
+                 owner, 100 + mod_id, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+    }
+}
+\end{lstlisting}
+
+这种方式的主要优点是通信次数少、同步点少，MPI 开销集中在输入广播和 residue 回传两个阶段。它非常适合本实验这种 CRT 小模数彼此独立的结构。缺点也很明确：并行粒度由小模数数量决定，本实验只有四个小模数，因此有效 MPI 进程数最多约为 4；继续增加 MPI 进程时，多余进程没有足够任务可做。
+
+\subsubsection{v5：在 v1 基础上加入 DIF/DIT、OpenMP 和 SIMD}
+
+v5 仍然属于第一类优化，MPI 层面的任务划分和通信方式与 v1 相同：rank 0 广播输入，四个 rank 分别处理四个小模数，非 0 rank 将 residue 发回 rank 0。因此 v5 没有重新引入 NTT 层间的 MPI 同步，而是在每个 MPI 进程内部优化小模数 NTT 的执行效率。
+
+v5 的第一个改动是使用 DIF/DIT 流程。传统 DIT 正变换通常需要先做 \texttt{bit\_reverse}，该步骤会产生不连续访存和大量元素交换。DIF（Decimation in Frequency）正变换从大区间向小区间递减计算，不需要初始位逆序，但输出为 bit-reversed 顺序；DIT（Decimation in Time）逆变换可以直接接收 bit-reversed 顺序输入，并输出正常顺序。因此正变换使用 DIF、逆变换使用 DIT 时，可以省掉显式 \texttt{bit\_reverse}：
+\begin{enumerate}
+    \item $A$ 和 $B$ 都经过 DIF 正变换，得到相同的 bit-reversed 顺序频域数组；
+    \item 两个数组顺序一致，所以可以直接逐点相乘；
+    \item 逆变换使用 DIT，将 bit-reversed 顺序输入还原为正常顺序系数。
+\end{enumerate}
+
+v5 的第二个改动是在 MPI 进程内部加入 OpenMP 和 SIMD。外层 butterfly block 之间没有数据依赖，适合用 OpenMP 分配给多个线程；同一个 block 内部的若干 butterfly 操作形态一致，适合用 SIMD 提示编译器向量化。典型结构如下：
+\begin{lstlisting}[language=C++,title=v5 的进程内 OpenMP/SIMD 结构]
+#pragma omp parallel for schedule(static)
+for (int block = 0; block < blocks; ++block) {
+    int base = block * len;
+    #pragma omp simd
+    for (int k = 0; k < half; ++k) {
+        // butterfly
+    }
+}
+\end{lstlisting}
+
+点值乘法阶段也采用相同思路：
+\begin{lstlisting}[language=C++]
+#pragma omp parallel for simd schedule(static)
+for (int i = 0; i < limit; ++i) {
+    A[i] = mul_mod_ntt(A[i], B[i], mod);
+}
+\end{lstlisting}
+
+因此 v5 的整体结构可以表示为：
+\[
+\text{CRT 模数级 MPI 并行}+
+\text{进程内 OpenMP}+
+\text{SIMD 向量化}+
+\text{DIF/DIT 流程优化}
+\]
+它保留了 v1 的低通信优势，同时继续挖掘单个小模数 NTT 内部的线程级和指令级并行能力。实测中，\texttt{np=4, OMP\_NUM\_THREADS=2} 的配置效果最好，说明在该服务器上适度多线程可以提升每个 MPI 进程的计算能力；但线程数继续增大后，会受到线程同步、内存带宽和节点资源调度的限制。
+
+\subsection{第二类：NTT butterfly stage 级并行}
+
+第二类优化不再把一个小模数 NTT 完整交给单个进程，而是让所有 MPI 进程共同完成每个小模数下的 NTT。它的并行点来自 NTT 每一层中的 butterfly block。同一层内不同 block 互不依赖，可以分给不同 rank；但不同层之间有严格依赖，必须在每层结束后同步完整数组。
+
+\subsubsection{v2：按 butterfly block 划分 MPI 任务}
+
+v2 中，对于每个 CRT 小模数，所有 rank 都参与正 NTT、点值乘法和逆 NTT。设当前层长度为 \texttt{len}，则该层共有：
+\[
+blocks=\frac{N}{len}
+\]
+个 butterfly block。rank 为 $r$ 的进程负责：
+\[
+\left[
+\frac{blocks\cdot r}{size},
+\frac{blocks\cdot (r+1)}{size}
+\right)
+\]
+范围内的 block。代码中对应为：
+\begin{lstlisting}[language=C++,title=v2 的 stage 级 block 划分]
+int blocks = n / len;
+int block_l = blocks * rank / size;
+int block_r = blocks * (rank + 1) / size;
+
+for (int block = block_l; block < block_r; ++block) {
+    int base = block * len;
+    for (int k = 0; k < half; ++k) {
+        // butterfly
+    }
+}
+\end{lstlisting}
+
+每个进程只修改自己负责的数组片段。由于下一层 butterfly 可能访问上一层由其他进程计算出的数据，当前层结束后必须执行全局同步。本实验使用 \texttt{MPI\_Allgatherv}，使所有进程都得到同步后的完整数组：
+\begin{lstlisting}[language=C++,title=v2 的层间同步]
+MPI_Allgatherv(f.data() + displs[rank], counts[rank], MPI_UINT64_T,
+               gathered.data(), counts.data(), displs.data(), MPI_UINT64_T,
+               MPI_COMM_WORLD);
+f.swap(gathered);
+\end{lstlisting}
+
+点值乘法阶段也按连续区间分给各 rank，计算完成后同样使用 \texttt{MPI\_Allgatherv} 同步。最后每个小模数的 residue 由 rank 0 取出并参与 CRT 合并。
+
+v2 的优点是 MPI 并行深入到了 NTT 内部，理论上可以突破“四个小模数最多四个任务”的限制；缺点是通信频率高。一次 NTT 有 $\log_2 N$ 层，正变换、逆变换以及点值乘法都会触发同步，通信开销很容易超过计算分摊带来的收益。
+
+\subsubsection{v3：在 stage 级 MPI 中加入 Barrett 规约}
+
+v3 保留 v2 的 MPI 通信结构，即仍然按 butterfly block 分配任务，并在每层后使用 \texttt{MPI\_Allgatherv} 同步。它的优化点不在通信，而在每个 rank 本地执行 butterfly 时的高频模乘。
+
+NTT 中最常见的模乘形式是：
+\begin{lstlisting}[language=C++]
+return x * y % mod;
+\end{lstlisting}
+其中 \texttt{\% mod} 对应整数除法/取模，延迟通常高于普通乘法、加法和移位。由于 butterfly 中旋转因子乘法出现次数为 $O(N\log N)$，点值乘法和逆变换缩放也需要大量模乘，所以减少取模开销可以降低计算部分的常数时间。
+
+Barrett 规约的思想是：当模数 $mod$ 固定时，预先计算一个近似倒数，用乘法和右移估计商，从而避免每次都做除法。对固定小模数 $mod$，预计算：
+\[
+\mu=\left\lfloor\frac{2^{64}}{mod}\right\rfloor
+\]
+对于待规约的 $x$，有：
+\[
+\frac{x}{mod}\approx \frac{x\mu}{2^{64}}
+\]
+所以估计商为：
+\[
+\hat{q}=\left\lfloor\frac{x\mu}{2^{64}}\right\rfloor
+\]
+代码中通过 128 位乘法后取高 64 位实现：
+\begin{lstlisting}[language=C++]
+u64 q = (u64)(((u128)x * br.mu) >> 64);
+\end{lstlisting}
+再计算候选余数：
+\[
+\hat{r}=x-\hat{q}\cdot mod
+\]
+由于估计商可能有很小误差，需要用条件减法把结果修正回 $[0,mod)$。本实验四个小模数均约为 $10^9$ 量级，两个模数元素相乘仍在 \texttt{uint64\_t} 范围内，因此使用两次条件减法即可覆盖修正范围。
+
+代码实现中为每个小模数构造一个 \texttt{BarrettReducer}：
+\begin{lstlisting}[language=C++,title=Barrett 参数和规约函数]
+struct BarrettReducer {
+    u64 mod;
+    u64 mu;
+};
+
+static inline BarrettReducer make_barrett(u64 mod) {
+    BarrettReducer br;
+    br.mod = mod;
+    br.mu = (u64)((((u128)1) << 64) / mod);
+    return br;
+}
+
+static inline u64 barrett_reduce(u64 x, const BarrettReducer &br) {
+    u64 q = (u64)(((u128)x * br.mu) >> 64);
+    u64 r = x - q * br.mod;
+    if (r >= br.mod) r -= br.mod;
+    if (r >= br.mod) r -= br.mod;
+    return r;
+}
+
+static inline u64 mul_mod_barrett(u64 x, u64 y,
+                                  const BarrettReducer &br) {
+    return barrett_reduce(x * y, br);
+}
+\end{lstlisting}
+
+在本实验中，Barrett 主要替换以下位置：
+\begin{enumerate}
+    \item 旋转因子数组 \texttt{roots[k]} 的递推模乘；
+    \item butterfly 中 \texttt{f[base+k+half] * roots[k]} 的模乘；
+    \item 点值乘法阶段 \texttt{A[i] * B[i]} 的模乘；
+    \item 逆 NTT 最后乘 \texttt{inv\_n} 的缩放模乘。
+\end{enumerate}
+
+CRT 最后的大模数合并阶段没有使用 Barrett，而是继续使用 \texttt{\_\_uint128\_t} 处理。原因是 CRT 合并的数值范围和小模数 NTT 内部不同，且调用频率远低于 butterfly 模乘；优先优化小模数 NTT 内部的高频模乘收益更高。
+
+因此，v3 可以看作“MPI stage 级通信结构 + 本地 Barrett 模乘优化”。如果 v3 相比 v2 变快，说明本地模乘确实占据了一部分运行时间；如果仍然慢于 v1，则说明频繁 \texttt{MPI\_Allgatherv} 仍是 stage 级方案的主要瓶颈。
+
+\subsubsection{v4：MPI stage + Barrett + DIF/DIT}
+
+v4 是 v3 的进一步流程优化，MPI 通信方式仍然沿用 v2/v3：每层 butterfly block 按 rank 划分，每层结束后通过 \texttt{MPI\_Allgatherv} 同步完整数组；本地模乘仍使用 Barrett 规约。
+
+与 v3 相比，v4 把 NTT 正变换和逆变换流程改为前面 v5 中介绍过的 DIF/DIT 组合，因此这里不再重复其数学过程。实现上，正变换调用 DIF 版本，逆变换调用 DIT 版本：
+\begin{lstlisting}[language=C++,title=v4 的 stage + Barrett + DIF/DIT 主流程]
+ntt_mpi_dif_forward_barrett(A, nm.mod, nm.root, comm);
+ntt_mpi_dif_forward_barrett(B, nm.mod, nm.root, comm);
+pointwise_mpi_stage_barrett(A, B, br, comm);
+intt_mpi_dit_inverse_barrett(A, nm.mod, nm.root, comm);
+\end{lstlisting}
+
+DIF/DIT 主要减少显式位逆序置换造成的不连续访存和交换开销，Barrett 主要减少模乘中的取模开销，二者都属于计算端优化。它们可以改善每个 rank 本地执行 butterfly 的效率，但不会改变 stage 级 MPI 每层同步的通信模式。因此 v4 的意义在于观察：在通信结构不变的前提下，连续叠加本地计算优化能够把 stage 级方案推进到什么程度。
+
+\section{测试方法}
+
+\subsection{正确性测试}
+
+所有版本均使用相同的输入输出格式。rank 0 负责读取输入和标准答案，并在计算结束后进行逐项比较。程序输出：
+\begin{lstlisting}
+polynomial multiply result is right
+\end{lstlisting}
+表示当前样例结果正确。
+
+正确性测试命令为：
+\begin{lstlisting}[language=bash]
+/usr/local/bin/mpiexec -np 4 -machinefile $PBS_NODEFILE /home/${USER}/main 0 4 1
+\end{lstlisting}
+
+\subsection{重点性能测试}
+
+性能测试重点选取第 4 个样例：
+\[
+n=131072,\quad P=1337006139375617
+\]
+该样例规模较大，且需要 CRT 合并，能够体现 MPI 并行和优化策略的主要差异。测试命令为：
+\begin{lstlisting}[language=bash]
+/usr/local/bin/mpiexec -np 4 -machinefile $PBS_NODEFILE /home/${USER}/main 4 4 5
+\end{lstlisting}
+
+\subsection{关于 perf 的说明}
+
+实验过程中尝试在 qsub 作业中使用 \texttt{perf stat} 采集硬件性能事件。登录节点 \texttt{master\_ubss1} 上存在 \texttt{/usr/bin/perf}，但 qsub 作业实际运行于计算节点 \texttt{node1\_ubss6}。诊断脚本输出显示计算节点中 \texttt{command -v perf} 为空，且 \texttt{/usr/bin/perf} 不存在。因此，在符合实验要求的 qsub 作业环境中无法使用 perf 采集硬件事件。
+
+因此本报告的正式性能数据以程序在 qsub 作业中输出的 \texttt{latency} 为准。perf 分析不作为正式实验数据来源。
+
+\section{实验结果}
+
+本节结果来自服务器 qsub 作业输出。每个版本首先执行 $0$ 到 $4$ 号样例的正确性测试，然后对第 $4$ 号大规模样例重复运行 5 次。前四个版本均使用 \texttt{np=4, OMP\_NUM\_THREADS=1}；v5 额外测试了 \texttt{np=4, OMP\_NUM\_THREADS=2} 和 \texttt{np=4, OMP\_NUM\_THREADS=4} 两种混合并行配置。
+
+\begin{table}[H]
+  \centering
+  \caption{各版本在 0--4 号样例上的正确性测试}
+  \label{tab:correctness}
+  \resizebox{\textwidth}{!}{
+  \begin{tabular}{l c c c c c}
+    \toprule
+    版本 & 样例0 & 样例1 & 样例2 & 样例3 & 样例4 \\
+    \midrule
+    v1 CRT 模数级 MPI & 正确 & 正确 & 正确 & 正确 & 正确 \\
+    v5 CRT MPI + OMP/SIMD + DIF/DIT（OMP=2） & 正确 & 正确 & 正确 & 正确 & 正确 \\
+    v5 CRT MPI + OMP/SIMD + DIF/DIT（OMP=4） & 正确 & 正确 & 正确 & 正确 & 正确 \\
+    v2 MPI stage & 正确 & 正确 & 正确 & 正确 & 正确 \\
+    v3 stage + Barrett & 正确 & 正确 & 正确 & 正确 & 正确 \\
+    v4 stage + Barrett + DIF/DIT & 正确 & 正确 & 正确 & 正确 & 正确 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{0--4 号样例单次测试延迟 / ms}
+  \label{tab:all_cases_latency}
+  \resizebox{\textwidth}{!}{
+  \begin{tabular}{l c c c c c}
+    \toprule
+    版本 & 样例0 & 样例1 & 样例2 & 样例3 & 样例4 \\
+    \midrule
+    v1 CRT 模数级 MPI & 0.052 & 133.987 & 133.133 & 132.304 & 135.248 \\
+    v5 CRT MPI + OMP/SIMD + DIF/DIT（OMP=2） & 0.504 & 68.231 & 65.696 & 66.260 & 68.646 \\
+    v5 CRT MPI + OMP/SIMD + DIF/DIT（OMP=4） & 6.700 & 105.882 & 84.294 & 93.734 & 106.176 \\
+    v2 MPI stage & 0.208 & 400.418 & 366.883 & 365.147 & 351.992 \\
+    v3 stage + Barrett & 0.211 & 320.991 & 314.793 & 315.433 & 319.257 \\
+    v4 stage + Barrett + DIF/DIT & 0.178 & 271.840 & 265.710 & 266.294 & 268.848 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{第 4 号样例重复测试结果}
+  \label{tab:perf_case4}
+  \resizebox{\textwidth}{!}{
+  \begin{tabular}{l c c c c c c}
+    \toprule
+    版本 & 第1次/ms & 第2次/ms & 第3次/ms & 第4次/ms & 第5次/ms & 平均/ms \\
+    \midrule
+    v1 CRT 模数级 MPI & 140.848 & 136.300 & 135.365 & 135.131 & 134.933 & 136.515 \\
+    v5 CRT MPI + OMP/SIMD + DIF/DIT（OMP=2） & 70.304 & 66.701 & 66.738 & 66.749 & 68.177 & 67.734 \\
+    v5 CRT MPI + OMP/SIMD + DIF/DIT（OMP=4） & 94.292 & 100.991 & 92.486 & 91.924 & 80.025 & 91.944 \\
+    v2 MPI stage & 361.261 & 347.167 & 346.936 & 347.083 & 347.080 & 349.905 \\
+    v3 stage + Barrett & 324.377 & 318.024 & 318.703 & 317.794 & 317.927 & 319.365 \\
+    v4 stage + Barrett + DIF/DIT & 294.576 & 290.667 & 289.886 & 289.117 & 290.491 & 290.947 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{不同版本相对 v1 的加速比}
+  \label{tab:speedup}
+  \begin{tabular}{l c c}
+    \toprule
+    版本 & 平均时间/ms & 相对 v1 加速比 \\
+    \midrule
+    v1 CRT 模数级 MPI & 136.515 & 1.00 \\
+    v5 CRT MPI + OMP/SIMD + DIF/DIT（OMP=2） & 67.734 & 2.02 \\
+    v5 CRT MPI + OMP/SIMD + DIF/DIT（OMP=4） & 91.944 & 1.48 \\
+    v2 MPI stage & 349.905 & 0.39 \\
+    v3 stage + Barrett & 319.365 & 0.43 \\
+    v4 stage + Barrett + DIF/DIT & 290.947 & 0.47 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{结果分析}
+
+\subsection{v1 与 v2 的对比}
+
+v1 使用 CRT 模数级并行，通信主要发生在非 0 进程将 residue 数组发送回 rank 0 的阶段。由于四个小模数下的 NTT 计算完全独立，v1 的同步和通信次数较少，适合大模数 CRT 场景。但 v1 的并行粒度较粗，最多只有四个模数任务，当 MPI 进程数超过四时，多余进程不能得到有效利用。
+
+v2 将 MPI 并行深入到每个小模数的 NTT 内部。该方法更符合 NTT stage 任务划分思想，同一层 butterfly block 由不同进程计算。但 NTT 每层结束后都必须同步完整数组，因此频繁调用 \texttt{MPI\_Allgatherv}，通信开销较高。从实测结果看，v1 在第 4 号样例上的平均时间为 $136.515$ ms，而 v2 为 $349.905$ ms，相对 v1 的加速比只有 $0.39$，即明显变慢。这说明对本实验规模和服务器环境而言，stage 级细粒度 MPI 并行带来的计算分摊收益小于层间全局通信开销。
+
+\subsection{Barrett 规约的影响}
+
+v3 使用 Barrett 规约替代小模数 NTT 中高频出现的普通取模乘法。理论上，Barrett 可以用乘法、位移和条件减法替代整数除法，从而降低 \texttt{x*y\%mod} 的代价。由于 NTT butterfly 中模乘出现次数为 $O(n\log n)$，该优化有较高的潜在收益。
+
+实测中，v3 的第 4 号样例平均时间为 $319.365$ ms，相比 v2 的 $349.905$ ms 约提升 $8.7\%$。这说明 Barrett 规约确实降低了小模数 NTT 内部模乘的常数开销。不过 v3 仍然慢于 v1，原因在于 v3 没有改变 stage 策略的通信结构，每一层 NTT 之后仍然需要 \texttt{MPI\_Allgatherv} 同步完整数组。因此 Barrett 优化能够改善计算部分，但无法消除 stage 级 MPI 并行中的主要通信瓶颈。
+
+\subsection{DIF/DIT 优化的影响}
+
+v4 通过 DIF 正变换和 DIT 逆变换配合，避免显式 \texttt{bit\_reverse}。位逆序置换属于不连续访存，对 cache 不友好。去掉该步骤能够减少额外交换和访存开销。
+
+实测中，v4 的平均时间为 $290.947$ ms，相比 v3 的 $319.365$ ms 继续提升约 $8.9\%$。这说明 DIF/DIT 对本地计算流程和访存模式有正向作用，尤其是避免显式位逆序置换后，减少了一部分额外访存和交换开销。但 v4 仍然沿用 stage 策略，每层依旧需要 \texttt{MPI\_Allgatherv} 同步，所以虽然 v4 是 stage 系列中最快的版本，平均时间仍然高于 v1 的 $136.515$ ms。
+
+\subsection{v5 混合并行效果分析}
+
+v5 在 v1 的 CRT 模数级 MPI 并行基础上加入 OpenMP、SIMD 和 DIF/DIT。它保留了 v1 的低通信结构，避免了 v2--v4 中每层 NTT 的全局同步；同时，每个 MPI 进程内部对自己负责的小模数 NTT 使用 OpenMP 和 SIMD 优化。
+
+从结果看，v5 在 \texttt{np=4, OMP\_NUM\_THREADS=2} 时表现最好，第 4 号样例平均时间为 $67.734$ ms，相对 v1 的加速比为 $2.02$。这说明对 CRT 模数并行而言，最有效的策略是保持外层模数任务的粗粒度 MPI 划分，并在每个模数内部适度使用线程级并行和 SIMD。该配置总共使用 8 个核心，正好对应单节点 \texttt{nodes=1:ppn=8}，避免了跨节点调度和额外通信。
+
+进一步将 OpenMP 线程数增加到 4，即 \texttt{np=4, OMP\_NUM\_THREADS=4}，理论上使用 16 个核心，但实测平均时间反而增加到 $91.944$ ms。该结果说明线程数并非越多越好。对于每个小模数 NTT 来说，OpenMP 并行区域、线程同步、内存带宽竞争和跨节点资源调度都可能带来额外开销。当每个 MPI 进程使用 4 个线程时，这些开销抵消了更多核心带来的收益。因此，本实验中 v5 的较优配置是 \texttt{np=4, OMP\_NUM\_THREADS=2}。
+
+\section{问题与反思}
+
+\subsection{perf 无法在 qsub 作业中使用}
+
+实验初期曾尝试使用 \texttt{perf stat} 和 \texttt{perf record} 分析程序。登录节点上可以找到 \texttt{/usr/bin/perf}，但 qsub 作业分配到的计算节点中没有该命令。由于实验要求通过 qsub 提交 MPI 程序，直接在登录节点运行 \texttt{mpiexec} 不符合正式实验流程。因此最终报告采用 qsub 输出的程序计时结果作为性能依据。
+
+\subsection{MPI 任务粒度选择}
+
+v1 和 v2 体现了两种典型的 MPI 任务划分思路。v1 是粗粒度任务并行，通信少但扩展性有限；v2 是细粒度 stage 并行，任务划分更深入但通信频繁。实测结果表明，在当前问题规模下，粗粒度 CRT 模数级 MPI 并行明显优于 stage 级 MPI 并行。NTT 算法本身存在严格的层间依赖，因此细粒度 MPI 并行需要在计算收益和同步开销之间权衡，不能简单认为任务划分越细越好。
+
+\subsection{优化叠加不一定线性收益}
+
+Barrett 和 DIF/DIT 都是计算端优化。若程序主要瓶颈在本地 butterfly 模乘和访存，它们可以带来明显收益；若程序主要瓶颈在 MPI 通信和同步，则计算端优化的收益会被通信开销掩盖。因此报告分析时不能只看优化是否“理论更快”，还需要结合具体实现和运行环境判断瓶颈。
+
+v5 的结果也说明，混合并行的线程数选择需要谨慎。相较于 \texttt{OMP\_NUM\_THREADS=2}，继续增加到 \texttt{OMP\_NUM\_THREADS=4} 并没有带来加速，反而使平均时间从 $67.734$ ms 增加到 $91.944$ ms。这说明更多核心可能引入线程调度、同步和内存竞争开销，实际最优配置需要通过实验确定。
+
+\section{总结}
+
+本实验在前序 OpenMP、SIMD、CRT NTT 代码基础上实现了五个 MPI 版本。v1 使用 CRT 模数级 MPI 并行，结构简单、通信少，适合作为大模数 CRT 场景的基础 MPI 实现。v2 实现 NTT stage 级 MPI 并行，将每层 butterfly block 分配给不同进程，并通过 \texttt{MPI\_Allgatherv} 完成层间同步。v3 在 v2 基础上加入 Barrett 规约，减少小模数 NTT 中高频模乘的取模开销。v4 进一步使用 DIF/DIT 流程优化，避免显式位逆序置换。v5 回到 v1 的低通信 CRT 模数级 MPI 框架，并在进程内部加入 OpenMP、SIMD 和 DIF/DIT，是本次实验中性能最好的版本。
+
+实测结果显示，v1 在第 4 号大规模样例上的平均时间为 $136.515$ ms；v2 由于频繁层间同步，平均时间增加到 $349.905$ ms；v3 和 v4 分别通过 Barrett 和 DIF/DIT 将 stage 系列优化到 $319.365$ ms 和 $290.947$ ms，但仍然受限于通信开销。v5 在 \texttt{np=4, OMP\_NUM\_THREADS=2} 下平均时间降至 $67.734$ ms，相对 v1 加速约 $2.02$ 倍，是最优配置。
+
+通过这些版本，可以系统比较粗粒度任务并行、细粒度 stage 并行、模乘规约优化、NTT 流程优化以及 MPI+OpenMP 混合并行对性能的影响。实验说明，在 MPI 程序中，通信和同步开销往往会显著影响最终性能；因此并行算法设计不能只关注计算部分的并行度，还需要综合考虑通信频率、任务粒度、线程数量和数据同步方式。
+
+\end{document}

@@ -1,0 +1,56 @@
+\relax 
+\providecommand \babel@aux [2]{\global \let \babel@toc \@gobbletwo }
+\@nameuse{bbl@beforestart}
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\providecommand*\new@tpo@label[2]{}
+\HyPL@Entry{0<</S/D>>}
+\babel@aux{UKenglish}{}
+\HyPL@Entry{1<</S/D>>}
+\@writefile{toc}{\contentsline {section}{\numberline {1}实验环境}{2}{section.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces 实验环境与约束}}{2}{table.caption.2}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:env}{{1}{2}{实验环境与约束}{table.caption.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}代码结构}{2}{section.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces 主要代码文件}}{2}{table.caption.3}\protected@file@percent }
+\newlabel{tab:code_files}{{2}{2}{主要代码文件}{table.caption.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}实验一：基础 NTT 的 Pthread 优化}{2}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}NTT 原理}{2}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}蝶形运算并行}{3}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}实验二：CRT 实现大模数 NTT}{6}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}为什么需要 CRT}{6}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}CRT 原理}{7}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}CRT 合并原理}{8}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}模数选择}{11}{subsection.4.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces 模数 CRT 中使用的 NTT 友好模数}}{11}{table.caption.4}\protected@file@percent }
+\newlabel{tab:crt_mods}{{3}{11}{模数 CRT 中使用的 NTT 友好模数}{table.caption.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}实验三：CRT 的 Pthread 优化}{11}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}并行思路}{11}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}CRT 合并并行}{12}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}实验四：OpenMP 自动调度优化}{12}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}OpenMP 运行时设置}{12}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}内部 NTT 并行}{13}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}模数并行}{15}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}CRT 合并中的 guided 调度}{16}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}实验五：OpenMP SIMD 自动向量化}{16}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}SIMD 优化动机}{16}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}消除旋转因子递推依赖}{17}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}小模数乘法优化}{18}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}性能测试与正确性分析}{18}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}性能测试与结果分析}{18}{subsection.8.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 串行与并行版本在大规模样例上的 perf 统计结果}}{19}{table.caption.5}\protected@file@percent }
+\newlabel{tab:perf_stat_result}{{4}{19}{串行与并行版本在大规模样例上的 perf 统计结果}{table.caption.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Pthread 和 OpenMP 区别分析}{20}{subsection.8.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}其他算法优化策略}{20}{section.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}任务池与动态负载均衡}{20}{subsection.9.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}分层混合并行}{21}{subsection.9.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.3}缓存友好的分块优化}{21}{subsection.9.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.4}多次实验任务并行}{21}{subsection.9.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {10}问题与反思}{21}{section.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.1}关于三模数与四模数}{21}{subsection.10.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.2}关于模数并行与内部并行}{21}{subsection.10.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {11}总结}{22}{section.11}\protected@file@percent }
+\newlabel{LastPage}{{11}{22}{总结}{page.22}{}}
+\gdef\lastpage@lastpage{22}
+\gdef\lastpage@lastpageHy{22}
+\gdef \@abspage@last{23}
