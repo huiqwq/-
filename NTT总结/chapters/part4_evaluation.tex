@@ -1,0 +1,301 @@
+\part{统一性能测试与综合分析}
+
+\section{实验环境与统一测试方法}
+
+\subsection{各平台环境}
+
+\begin{table}[H]
+  \centering
+  \caption{四类平时实验的运行环境}
+  \label{tab:all-env}
+  \small
+  \begin{tabularx}{\textwidth}{p{2.4cm} p{3.1cm} X p{3.0cm}}
+    \toprule
+    实验 & 平台 & 主要配置 & 工具链 \\
+    \midrule
+    SIMD & ARM/aarch64 服务器 & NEON，NTT 长度主要为 131072 & C++，\texttt{-O2/-O3} \\
+    \shortstack{Pthread/\\OpenMP} & OpenEuler ARM 服务器 & 每任务 1 个 8 核 CPU & Pthread、OpenMP \\
+    MPI & ARM 集群 & 4 rank，rank 内可用 OpenMP & \texttt{mpic++ -O3 -fopenmp} \\
+    GPU & AMD Ryzen AI MAX+ PRO 395 / Radeon 8060S & RDNA 3.5，40 CU，wave32，64 KB LDS/CU & HIP 7.13，AMD Clang，rocprofv3 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+历史实验的硬件不同，因此表 \ref{tab:all-env} 既是环境说明，也是跨架构比较的限制条件。本文不把不同机器的绝对毫秒数当作直接排名。
+
+\subsection{统一实验规模与输入}
+
+统一复测选择
+\[
+N=2^{10},2^{14},2^{17},2^{18},2^{20},2^{22},
+\]
+并使用固定随机种子生成相同输入。单模数实验使用 $998244353$；大模数 CRT 实验使用相同的四个 NTT 友好质数，并保证模数乘积覆盖系数上界。小规模样例可与朴素卷积对照，错误结果不进入性能统计，但不再设置独立正确性章节。
+
+\subsection{计时边界}
+
+CPU core 时间覆盖两次正变换、点值乘和一次逆变换；MPI 端到端时间还覆盖输入广播、residue 汇总和 CRT 合并，并取所有 rank 的最大完成时间；GPU 同时报告纯 kernel 时间和 H2D/kernel/D2H 端到端时间。旋转因子生成、内存分配和首次上下文初始化单独列出，避免混用 steady-state 与首次调用口径。
+
+\subsection{重复实验与命令}
+
+每个配置先预热，再正式运行至少 5--10 次，报告均值和标准差。平时 MPI 实验使用：
+
+\begin{lstlisting}[title=MPI实验编译和运行命令,language=bash]
+mpic++ -std=c++17 -O3 -fopenmp main.cc -o main
+mpiexec -np 4 -machinefile $PBS_NODEFILE ./main 4 4 5
+\end{lstlisting}
+
+统一项目使用：
+
+\begin{lstlisting}[title=统一复测命令,language=bash]
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+ctest --test-dir build --output-on-failure
+./scripts/run_cpu.sh
+OMP_NUM_THREADS=2 ./scripts/run_mpi.sh
+\end{lstlisting}
+
+
+\section{各体系结构内部性能分析}\oldwork\ \fusionwork
+
+\subsection{SIMD 版本消融实验}
+
+\begin{table}[H]
+  \centering
+  \caption{$N=131072$ 时 SIMD 平时作业结果（单位：ms）}
+  \label{tab:simd-result}
+  \begin{tabular}{r r r r r}
+    \toprule
+    模数 & 普通 NTT & 加减 NEON & 模乘 NEON & DIT/DIF \\
+    \midrule
+    7340033 & 55.5610 & 47.9239 & 50.0162 & 42.2464 \\
+    104857601 & 59.6159 & 48.4696 & 50.1707 & 41.9330 \\
+    469762049 & 62.7503 & 48.5684 & 50.3972 & 42.4692 \\
+    \midrule
+    平均 & 59.31 & 48.32 & 50.19 & 42.22 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Montgomery 与加减 NEON 将平均时间从 $59.31$ ms 降至 $48.32$ ms，约加速 $1.23$ 倍。继续向量化模乘后平均为 $50.19$ ms，反而略慢，说明 64 位乘积拆分和旋转因子装载存在成本。DIT/DIF 将平均时间进一步降至 $42.22$ ms，相对普通 NTT 约 $1.41$ 倍，证明减少位逆序访存比单独追求更宽模乘更有效。
+
+\subsection{Pthread/OpenMP 版本消融实验}
+
+\begin{table}[H]
+  \centering
+  \caption{共享内存四模数 CRT 版本结果}
+  \label{tab:thread-result}
+  \begin{tabular}{l r r}
+    \toprule
+    版本 & 核心时间/ms & 相对串行加速比 \\
+    \midrule
+    四模数 CRT 串行 & 927.15 & 1.00 \\
+    四模数 CRT Pthread & 318.32 & 2.91 \\
+    OpenMP 模数并行 & 251.48 & 3.69 \\
+    OpenMP NTT 内部并行 & 353.28 & 2.63 \\
+    OpenMP + SIMD & 144.90 & 6.40 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Pthread 手工线程版本明显优于串行 CRT，但 OpenMP 模数并行更快，因为四个完整 NTT 任务粒度粗、同步少。OpenMP 内部并行每层进入并行区并隐式同步，性能不如模数并行。OpenMP+SIMD 同时减少模数间串行和局部指令成本，在该组旧实验中最好。这里的 OpenMP+SIMD 属于平时作业，不计为新增内容。
+
+\subsection{MPI 版本消融实验}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      width=0.92\textwidth,height=5.7cm,
+      ybar,bar width=13pt,ymin=0,ymax=7.7,
+      ylabel={相对串行 CRT 加速比},
+      symbolic x coords={Serial,v1,v2,v3,v4,v5-2,v5-4},
+      xtick=data,xticklabel style={rotate=25,anchor=east},
+      nodes near coords,nodes near coords style={font=\scriptsize},
+      grid=major
+    ]
+      \addplot[fill=blue!55] coordinates {
+        (Serial,1.00) (v1,3.44) (v2,1.34) (v3,1.47)
+        (v4,1.61) (v5-2,6.93) (v5-4,5.10)
+      };
+    \end{axis}
+  \end{tikzpicture}
+  \caption{MPI 第4号大规模样例的版本消融结果}
+  \label{fig:mpi-speedup}
+\end{figure}
+
+串行 CRT 平均用时为 $469.360$ ms，v1 的模数级并行达到 $3.44$ 倍，而逐层同步的 v2 只有 $1.34$ 倍，说明 \texttt{Allgatherv} 是主要瓶颈。Barrett 和 DIT/DIF 使 v2 依次改善约 $8.7\%$ 和 $8.9\%$，但没有改变通信结构。v5 在 4 rank $\times$ 2 线程时用时 $67.734$ ms、加速 $6.93$ 倍；增加到每 rank 4 线程反而降至 $5.10$ 倍，表明线程数继续增加后，同步和内存竞争抵消了计算收益。
+
+\subsection{HIP 版本性能分析}
+
+固定 $N=2^{20}$ 时，平时 HIP 实验得到：
+
+\begin{table}[H]
+  \centering
+  \caption{完整 HIP NTT 的模乘和 LDS 优化}
+  \label{tab:gpu-full}
+  \begin{tabular}{l r r r}
+    \toprule
+    方法 & 正变换/ms & 逆变换/ms & 正变换相对 baseline \\
+    \midrule
+    Runtime modulo & 1.1523 & 0.7766 & 1.000 \\
+    Barrett & 1.1348 & 0.7522 & 1.015 \\
+    Montgomery & 1.1506 & 0.7504 & 1.002 \\
+    Montgomery tiled & 1.2047 & 0.7791 & 0.957 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+独立模乘中 Barrett 和 Montgomery 相对 runtime modulo 分别加速 $2.156$ 和 $5.350$ 倍，但完整 NTT 只改善约 $1.5\%$ 和 $0.2\%$，说明模乘不是唯一瓶颈。LDS tiled 慢约 $4.3\%$，其搬运和屏障成本超过减少 kernel 启动的收益。
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      width=0.92\textwidth,height=6.0cm,
+      xlabel={$\log_2 N$},ylabel={时间/ms},
+      xtick={10,14,18,20,22,23},ymode=log,
+      grid=both,legend pos=north west,
+      mark options={solid}
+    ]
+      \addplot+[mark=*,thick] coordinates {
+        (10,0.018) (14,0.374) (18,9.064)
+        (20,31.053) (22,124.380) (23,271.823)
+      };
+      \addlegendentry{CPU}
+      \addplot+[mark=triangle*,thick] coordinates {
+        (10,0.5222) (14,0.5452) (18,0.5815)
+        (20,1.1648) (22,7.9520) (23,23.6723)
+      };
+      \addlegendentry{HIP Montgomery}
+    \end{axis}
+  \end{tikzpicture}
+  \caption{CPU 与 HIP NTT 的规模扩展曲线（纵轴为对数刻度）}
+  \label{fig:gpu-scale}
+\end{figure}
+
+$N\le2^{14}$ 时 GPU kernel 启动占主导，CPU 更快；从 $2^{18}$ 开始 GPU 获得明显优势；$2^{20}$ 达到该组测试最大加速比 $26.66$；再增大后，工作集和跨步访存使加速比回落。
+
+\section{跨架构综合分析}\fusionwork\ \newwork
+
+\subsection{跨机器原始时间的可比性}
+
+ARM SIMD、OpenEuler 线程实验、MPI 集群和 AMD GPU 的硬件、模数数量与计时边界不同，因此不能根据原始毫秒数直接断言 GPU、MPI 或 SIMD 谁“绝对最好”。例如 SIMD 表是单模数 NTT，线程与 MPI 表是四模数 CRT，而 GPU 表主要为单次变换纯 kernel；这些工作量并不相同。
+
+\subsection{归一化性能总结}
+
+\begin{table}[H]
+  \centering
+  \caption{各平台内部代表性加速趋势}
+  \label{tab:normalized-summary}
+  \small
+  \begin{tabularx}{\textwidth}{p{3.0cm} p{3.9cm} p{2.3cm} X}
+    \toprule
+    平台 & 代表版本 & 平台内加速比 & 主要收益来源 \\
+    \midrule
+    ARM SIMD & NEON+DIT/DIF & 约 1.41 & 模加减向量化和删除位逆序 \\
+    Pthread/OpenMP & OpenMP+SIMD CRT & 6.40 & 模数级并行和局部向量化 \\
+    MPI & v5，4 rank $\times$ 2线程 & 6.93 & 低通信模数并行+rank内优化 \\
+    AMD HIP & $N=2^{20}$ Montgomery & 26.66 & GPU 大规模蝶形吞吐 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+表 \ref{tab:normalized-summary} 只能说明“每个平台相对自身基准取得了多少改善”。HIP 的 $26.66$ 还使用单线程 CPU 作为分母；若与多线程 CPU 端到端卷积比较，加速比会改变。
+
+\subsection{规模扩展性}
+
+小规模时 SIMD/线程/GPU 的固定开销占比较高；规模增大后 $O(N\log N)$ 计算逐渐覆盖固定开销；继续增大又可能受到 cache、DRAM、显存或通信带宽限制。因此性能曲线通常先改善后趋于平坦，GPU 加速比甚至会在超出缓存后回落。
+
+\subsection{优化不能线性叠加的原因}
+
+SIMD 可能被 64 位模乘和内存带宽限制；OpenMP 可能被层间 barrier 和运行时调度限制；MPI 可能被集合通信限制；GPU 可能被位逆序、全局访存和 kernel 启动限制。Lazy Reduction 只减少算术规约，若瓶颈位于通信或访存，整体收益仍会受限。这也解释了 NEON 模乘、MPI Barrett 和 GPU Montgomery 在不同场景中的收益差异。
+
+\subsection{基于问题特征的 NTT 后端选择策略}\newwork
+
+选择因素包括 $N$、批次数量 $B$、是否需要 CRT、数据是否已经在 GPU、可用 CPU 核心/MPI 节点以及任务更关注延迟还是吞吐。
+
+\begin{table}[H]
+  \centering
+  \caption{NTT 后端选择建议}
+  \label{tab:backend-choice}
+  \small
+  \begin{tabularx}{\textwidth}{p{3.6cm} p{3.6cm} X}
+    \toprule
+    场景 & 推荐后端 & 原因 \\
+    \midrule
+    小规模、单次调用 & serial/SIMD & 避免线程和 GPU 固定开销 \\
+    中等规模、单节点 & OpenMP 或 OpenMP SIMD & 蝶形足以覆盖 barrier，且共享内存通信低 \\
+    CRT 大模数、单节点 & OpenMP 模数并行 & 四个完整 NTT 独立，调度简单 \\
+    CRT 大模数、多 rank & MPI 模数级并行 & 通信集中在末尾，计算通信比高 \\
+    单模数大规模 & GPU & 大量规则蝶形提供高吞吐 \\
+    大批量卷积 & GPU/任务级并行 & 摊薄初始化、启动和传输 \\
+    数据已驻留 GPU & GPU & H2D/D2H 不再是每次固定成本 \\
+    CPU 数据、单次中小任务 & SIMD/OpenMP & GPU 端到端时间可能更高 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+若需要 CRT，首先进入模数级 OpenMP/MPI 路径；否则根据规模和数据驻留判断 CPU 或 GPU。决策流程可表达为：
+
+\begin{lstlisting}[title=后端选择的分析性决策流程]
+if (requires_CRT)
+    backend = multi_node ? MPI_modulus : OpenMP_modulus;
+else if (data_on_GPU && (large_N || large_batch))
+    backend = GPU;
+else if (small_N)
+    backend = serial_or_SIMD;
+else if (medium_N)
+    backend = OpenMP_or_OpenMP_SIMD;
+else
+    backend = compare_GPU_end_to_end_with_OpenMP;
+\end{lstlisting}
+
+批量 $B$ 增大时，GPU 每任务平均时间近似为
+\[
+\overline{T}_{GPU}
+=\frac{T_{init}+B\,T_{compute}}B,
+\]
+固定初始化被摊薄，因此 GPU 的适用下限下降。数据已经在显存时同理。最终阈值应由目标硬件实测曲线确定，而不是写死为某个 $2^k$。
+
+\section{实验局限与改进方向}
+
+\begin{itemize}
+  \item 历史数据来自不同机器与计时边界，只能解释各平台内部趋势；
+  \item GPU 平时数据来自 AMD HIP；
+  \item OpenMP \texttt{simd} 是否生成高效指令依赖编译器，本报告不新增显式 SIMD 对比实验；
+  \item CRT 模数级 MPI 的并行度受模数数量限制，更多 rank 应用于批次而非空闲；
+  \item stage MPI 复制完整数组，后续可研究分布式 Stockham 或六步 NTT；
+  \item GPU tiled 参数依赖具体硬件，可继续研究 warp shuffle、Stockham 和 GPU-aware MPI；
+\end{itemize}
+
+\section{新增内容说明}
+
+\begin{table}[H]
+  \centering
+  \caption{本次新增内容及其与平时作业的区别}
+  \label{tab:new-content}
+  \small
+  \begin{tabularx}{\textwidth}{p{3.6cm} p{2.4cm} X}
+    \toprule
+    新增内容 & 所在章节 & 与平时作业的区别 \\
+    \midrule
+    统一 NTT 计算图与跨架构映射 & 第4章 & 将四类实现放入同一层次结构，比较并行对象和同步位置 \\
+    Lazy Reduction 与值域控制 & 第3章 & 延迟蝶形标准化，并针对 32/64 位数据类型证明安全范围 \\
+    统一 NTT 算法框架与实验基准 & 第10章 & 统一 Plan、输入、计时、输出和基本正确性保证 \\
+    跨层次性能开销模型 & 第11章 & 同时建模算术、访存、同步、通信、启动和传输 \\
+    跨架构评价指标 & 第12章 & 不再直接排列跨机器原始时间，改用归一化指标 \\
+    后端选择策略 & 第15章 & 根据规模、批次、CRT 和数据驻留综合选择后端 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+新增工作建立在“共同算法基础”和“各体系结构优化”两个板块之上，既增加 Lazy Reduction 算法及值域分析，也把旧实验转换为统一、可解释的跨架构研究。
+\section{总结}
+
+本文围绕同一 NTT 卷积计算图，融合讨论了 SIMD、Pthread/OpenMP、MPI 与 GPU。算法上的共同核心是 stage 内独立蝶形、stage 间依赖和高频模乘；体系结构差异主要体现在并行粒度、同步机制、数据位置和固定开销。
+
+平时实验表明，SIMD 的收益受模乘拆分限制，DIT/DIF 通过减少位逆序访存取得进一步改善；Pthread/OpenMP 中粗粒度 CRT 模数并行优于频繁同步的内部并行；MPI 中低通信模数级方案明显优于逐 stage 全数组同步，rank 内线程数也不是越多越好；GPU 适合中大规模规则蝶形，但独立模乘的巨大加速不会直接等于完整 NTT 加速，LDS 分块也可能因同步与搬运变慢。
+
+本次新增 Lazy Reduction、统一 Plan、跨层次开销模型、归一化评价和后端选择策略。Lazy Reduction 通过扩大合法中间值域减少规约次数，但实际收益仍需在服务器与 HIP 平台按统一口径复测。综合来看，NTT 优化的关键不是最大化并行单元数量，而是同时控制算术、同步、通信与访存开销：小规模优先 serial/SIMD，中等规模使用共享内存线程，大模数 CRT 优先模数级 OpenMP/MPI，大规模或批量且数据适合驻留显存时使用 HIP GPU。
+
+感谢老师和助教这一学期的付出，祝福老师和助教工作顺利，假期愉快！

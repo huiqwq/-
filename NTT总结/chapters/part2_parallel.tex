@@ -1,0 +1,307 @@
+\part{不同体系结构上的并行优化}
+
+\section{SIMD 指令级优化}\oldwork\ \fusionwork
+
+\subsection{NEON 向量化对象}
+
+ARM NEON 寄存器宽度为 128 位，可一次容纳 4 个 32 位无符号整数。NTT 中适合向量化的操作包括蝶形模乘与模加减、点值乘法以及逆变换归一化。困难在于两个 32 位数的乘积需要 64 位中间结果，而一个 128 位寄存器只能容纳两个 64 位结果。
+
+\subsection{四路 Montgomery 模乘}
+
+平时 SIMD 代码把 4 路乘法拆成低两路和高两路：
+
+\begin{lstlisting}[title=NEON四路乘法的低高两组拆分,label={lst:neon-mul},language={C++}]
+uint64x2_t prod_low = vmull_u32(
+    vget_low_u32(a), vget_low_u32(b));
+uint64x2_t prod_high = vmull_u32(
+    vget_high_u32(a), vget_high_u32(b));
+
+uint32x2_t low = montgomery_reduce2_neon(
+    prod_low, mont.mod, mont.inv);
+uint32x2_t high = montgomery_reduce2_neon(
+    prod_high, mont.mod, mont.inv);
+return vcombine_u32(low, high);
+\end{lstlisting}
+
+前两行分别产生 $[a_0b_0,a_1b_1]$ 和 $[a_2b_2,a_3b_3]$。随后两次 Montgomery 规约把 64 位结果降回 32 位，最后合并成 4 路向量。这段代码说明 SIMD 宽度并不等于实际乘法吞吐：扩宽、拆分、规约与合并都属于额外指令。
+
+\subsection{向量化蝶形}
+
+得到 4 路旋转因子乘积后，模加和模减可以完全向量化：
+
+\begin{lstlisting}[title=NEON向量化模加和模减,label={lst:neon-butterfly},language={C++}]
+uint32x4_t roots = vld1q_u32(roots_buf);
+uint32x4_t right = vld1q_u32(&f[base + j + half]);
+uint32x4_t v = montgomery_mul4_neon(roots, right, mont);
+
+uint32x4_t sum = vaddq_u32(u, v);
+uint32x4_t ge = vcgeq_u32(sum, mod_v);
+sum = vsubq_u32(sum, vandq_u32(ge, mod_v));
+
+uint32x4_t diff = vsubq_u32(u, v);
+uint32x4_t need = vcltq_u32(u, v);
+diff = vaddq_u32(diff, vandq_u32(need, mod_v));
+\end{lstlisting}
+
+\texttt{vcgeq} 和 \texttt{vcltq} 生成逐 lane 掩码，再用按位与选择是否加减模数，从而避免分支。相同的四路 Montgomery 乘法还用于点值乘和逆变换缩放，使 SIMD 覆盖主要热点。
+
+\subsection{DIT/DIF 与 SIMD 的联合效果}
+
+平时结果中，单独把 Montgomery 模乘改成 NEON 并没有超过仅向量化加减的版本；原因是 64 位乘积的拆分与重组抵消了部分收益。加入 DIT/DIF 后平均时间进一步下降，说明减少位逆序访存比继续增加局部 SIMD 指令更有效。该结果体现了优化顺序：先消除不必要的数据移动，再压缩单个蝶形的算术成本。
+
+\section{Pthread 共享内存并行}\oldwork\ \fusionwork
+
+\subsection{线程共享上下文}
+
+Pthread 版本让所有线程共享 NTT 数组、模数和当前方向，并用 barrier 保证 stage 顺序：
+
+\begin{lstlisting}[title=Pthread NTT共享上下文,label={lst:pthread-context},language={C++}]
+struct NttContext {
+    u64 *f;
+    int n, threads;
+    u64 mod;
+    bool inverse;
+    pthread_barrier_t barrier;
+};
+\end{lstlisting}
+
+上下文只保存一份数组指针，线程间无需复制数据。\texttt{threads} 同时用于任务划分和 barrier 参与者数量，因此主线程也必须执行工作函数，才能在 barrier 上与子线程汇合。
+
+\subsection{两种 stage 划分方式}
+
+NTT 前期 \texttt{len} 小、block 数多，适合按 block 轮转；后期 block 数少但每个 block 包含大量蝶形，需改为按蝶形总数划分。平时代码的选择逻辑如下：
+
+\begin{lstlisting}[title=根据stage形态切换Pthread粒度,label={lst:pthread-grain},language={C++}]
+for (int len = 2; len <= n; len <<= 1) {
+    u64 wn = qpow(G, (mod - 1) / len, mod);
+    if (inverse) wn = qpow(wn, mod - 2, mod);
+
+    int blocks = n / len;
+    if (blocks >= threads)
+        ntt_stage_by_blocks(f, n, len, wn, mod, tid, threads);
+    else
+        ntt_stage_by_butterflies(f, n, len, wn, mod, tid, threads);
+
+    pthread_barrier_wait(&ctx->barrier);
+}
+\end{lstlisting}
+
+若始终按完整 block 划分，则最后一层只有一个 block，大多数线程空闲。按蝶形总数切换后，即使 \texttt{len=n}，也能把 $n/2$ 个蝶形均分给线程。每层末尾的 barrier 不可省略，因为下一层会读取本层其他线程写入的数据。
+
+\subsection{主线程参与和线程生命周期}
+
+\begin{lstlisting}[title=创建子线程并让主线程参与,label={lst:pthread-create},language={C++}]
+int worker_threads = threads - 1;
+for (int t = 0; t < worker_threads; ++t) {
+    tasks[t] = {&ctx, t};
+    pthread_create(&tids[t], nullptr, ntt_worker, &tasks[t]);
+}
+
+run_ntt_worker(&ctx, worker_threads); // main thread works
+
+for (pthread_t tid : tids) pthread_join(tid, nullptr);
+\end{lstlisting}
+
+实验平台每个任务有 8 核，因此最多创建 7 个子线程并让主线程承担第 8 份任务。这样避免主线程只等待而浪费核心。Pthread 的优点是能精确控制生命周期、划分和 barrier；缺点是代码量与调试复杂度高。
+
+\subsection{CRT 模数并行与合并并行}
+
+四个小模数 NTT 完全独立，可以由 3 个子线程和主线程分别计算。所有 residue 完成后，输出系数之间也互不依赖，因此 CRT 合并可按连续区间再次并行。该粗粒度策略的同步次数远少于在每个 NTT stage 内建立线程，适合四模数大模数卷积。
+
+\section{OpenMP 自动调度与 SIMD 向量化}\oldwork\ \fusionwork
+
+\subsection{OpenMP NTT 内部并行}
+
+OpenMP 版本保留 Pthread 的粒度判断，但把显式线程创建替换为运行时调度。前期按 block 静态分配：
+
+\begin{lstlisting}[title=OpenMP按block静态调度,label={lst:omp-block},language={C++}]
+#pragma omp parallel for schedule(static)
+for (int block = 0; block < blocks; ++block) {
+    int base = block * len;
+    u64 w = 1;
+    for (int k = 0; k < half; ++k) {
+        u64 x = f[base + k];
+        u64 y = mul_mod(f[base + k + half], w, mod);
+        f[base + k] = add_mod(x, y, mod);
+        f[base + k + half] = sub_mod(x, y, mod);
+        w = mul_mod(w, wn, mod);
+    }
+}
+\end{lstlisting}
+
+\texttt{schedule(static)} 适合每个 block 计算量相同的规则循环。循环末尾默认存在隐式 barrier，正好满足 stage 依赖。后期 block 数不足时，代码进入 parallel region，按全体蝶形的连续编号计算每个线程的区间。
+
+\subsection{OpenMP CRT 模数并行}
+
+\begin{lstlisting}[title=四模数OpenMP任务并行,label={lst:omp-mod},language={C++}]
+int mod_threads = min(get_omp_threads(), CRT_CNT);
+#pragma omp parallel for schedule(static) num_threads(mod_threads)
+for (int i = 0; i < CRT_CNT; ++i) {
+    multiply_mod_ntt(a, b, residues[i], n, CRT_MODS[i]);
+}
+\end{lstlisting}
+
+该循环只有 4 个任务，因此最大并行度有限；但每个任务包含完整的两次正 NTT、点乘和逆 NTT，粒度很粗，运行时调度与同步开销相对较小。平时实验中它优于频繁进入并行区的内部 NTT 版本。
+
+\subsection{CRT 合并的调度策略}
+
+\begin{lstlisting}[title=CRT输出系数的guided调度,label={lst:omp-crt},language={C++}]
+#pragma omp parallel for schedule(guided, 256)
+for (int i = 0; i < result_len; ++i) {
+    u64 r[CRT_CNT];
+    for (int j = 0; j < CRT_CNT; ++j)
+        r[j] = residues[j][i];
+    ab[i] = crt_combine_one(r, target_mod, inv_prod_mod);
+}
+\end{lstlisting}
+
+每个系数都执行相同数量的 Garner 步骤，理论上 \texttt{static} 已足够；平时代码选择 \texttt{guided} 是为了减小尾部不均衡。应把这视为调度策略对照，而不能默认动态调度总是更快，因为任务获取本身也有成本。
+
+\subsection{旋转因子预计算与 omp simd}
+
+原始蝶形使用 \texttt{w=w*wn}，相邻迭代存在循环携带依赖，编译器难以向量化。平时 OpenMP SIMD 版本先生成 \texttt{roots[k]}，再对蝶形加 \texttt{omp simd}：
+
+\begin{lstlisting}[title=消除旋转因子依赖后的omp simd,label={lst:omp-simd},language={C++}]
+vector<u64> roots(half);
+roots[0] = 1;
+for (int k = 1; k < half; ++k)
+    roots[k] = mul_mod_ntt(roots[k - 1], wn, mod);
+
+for (int base = 0; base < n; base += len) {
+    #pragma omp simd
+    for (int k = 0; k < half; ++k) {
+        u64 x = f[base + k];
+        u64 y = mul_mod_ntt(f[base + k + half], roots[k], mod);
+        f[base + k] = add_mod(x, y, mod);
+        f[base + k + half] = sub_mod(x, y, mod);
+    }
+}
+\end{lstlisting}
+
+预计算把递推关系移到循环外，使每个 \texttt{k} 只读自己的旋转因子。\texttt{omp simd} 是编译器提示，不保证一定生成最优向量指令；其效果依赖编译器能否处理模乘。
+
+\subsection{Pthread、OpenMP 与 OpenMP SIMD 对比}
+
+Pthread 提供最细的线程控制，适合自定义 stage 粒度和 barrier；OpenMP 代码更简洁，适合规则循环和粗粒度模数任务；OpenMP SIMD 在此基础上尝试利用指令级并行。三者都共享内存，差异主要来自编程抽象、调度成本和编译器向量化能力，而不是数学算法不同。
+
+\section{MPI 分布式并行}\oldwork\ \fusionwork
+
+\subsection{输入广播和计时方式}
+
+rank 0 读取输入，再广播 $n$、目标模数和两个输入数组。正式计时前后使用 \texttt{MPI\_Barrier}，由 rank 0 输出完整并行区间的时间。该口径包含必要通信，并避免只测某个先完成进程的局部时间。
+
+\subsection{CRT 模数级 MPI 并行}
+
+四个 rank 分别负责一个小模数，非零 rank 完成后把 residue 发送给 rank 0：
+
+\begin{lstlisting}[title=CRT模数级MPI并行,label={lst:mpi-mod},language={C++}]
+for (int mod_id = 0; mod_id < CRT_CNT; ++mod_id) {
+    int owner = mod_id % size;
+    if (rank == owner) {
+        vector<u64> local;
+        multiply_mod_ntt(a, b, local, n, CRT_MODS[mod_id]);
+        if (rank == 0) residues[mod_id].swap(local);
+        else MPI_Send(local.data(), result_len, MPI_UINT64_T,
+                      0, 100 + mod_id, MPI_COMM_WORLD);
+    }
+    if (rank == 0 && owner != 0) {
+        residues[mod_id].resize(result_len);
+        MPI_Recv(residues[mod_id].data(), result_len, MPI_UINT64_T,
+                 owner, 100 + mod_id, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+    }
+}
+\end{lstlisting}
+
+每个进程在较长时间内独立执行完整 NTT，通信只发生在末尾，因此计算通信比高。缺点是并行度上限受 CRT 模数数量限制；当进程数超过 4 时，多余 rank 没有模数任务。
+
+\subsection{NTT stage 级 MPI 并行}
+
+stage 方案把当前层的 block 分给不同 rank，并在每层后同步完整数组：
+
+\begin{lstlisting}[title=stage级MPI蝶形与层间同步,label={lst:mpi-stage},language={C++}]
+int block_l = blocks * rank / size;
+int block_r = blocks * (rank + 1) / size;
+
+#pragma omp parallel for schedule(static)
+for (int block = block_l; block < block_r; ++block) {
+    int base = block * len;
+    #pragma omp simd
+    for (int k = 0; k < half; ++k) {
+        u64 x = f[base + k];
+        u64 y = mul_mod_ntt(f[base + k + half], roots[k], mod);
+        f[base + k] = add_mod(x, y, mod);
+        f[base + k + half] = sub_mod(x, y, mod);
+    }
+}
+
+MPI_Allgatherv(f.data() + displs[rank], counts[rank],
+               MPI_UINT64_T, gathered.data(), counts.data(),
+               displs.data(), MPI_UINT64_T, MPI_COMM_WORLD);
+f.swap(gathered);
+\end{lstlisting}
+
+\texttt{MPI\_Allgatherv} 使每个 rank 在下一层开始前都得到完整数组。该方案深入到单模数 NTT 内部，但一次卷积包含三次 NTT，每次有 $\log_2N$ 层，因此产生约 $3\log_2N$ 次完整数组集合通信，通信成本很容易超过计算分摊收益。
+
+\subsection{Barrett、DIT/DIF 与混合并行}
+
+v3 用 Barrett 降低本地模乘开销，v4 再用 DIF/DIT 删除显式位逆序；这些优化改善了 stage 系列的计算部分，却不能减少 \texttt{Allgatherv} 次数。v5 回到低通信的模数级 MPI，在每个 rank 内继续使用 OpenMP/SIMD 和 DIF/DIT，形成“进程间粗粒度、进程内细粒度”的混合路径。
+
+\section{GPU 并行优化：HIP 实验}\oldwork\ \fusionwork
+
+\subsection{一个线程负责一个蝶形}
+
+长度为 $N$ 的每层有 $N/2$ 个蝶形，HIP 代码以全局线程号确定蝶形位置：
+
+\begin{lstlisting}[title=GPU蝶形kernel,label={lst:gpu-butterfly},language={C++}]
+__global__ void butterfly_kernel(u32* data,
+    const u32* twiddles, int n, int length, u32 mod) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= n / 2) return;
+
+    int half = length / 2;
+    int group = tid / half;
+    int j = tid % half;
+    int first = group * length + j;
+    int second = first + half;
+    int tw = j * (n / length);
+
+    u32 left = data[first];
+    u32 right = (u64)data[second] * twiddles[tw] % mod;
+    data[first] = left + right >= mod
+                    ? left + right - mod : left + right;
+    data[second] = left >= right
+                    ? left - right : left + mod - right;
+}
+\end{lstlisting}
+
+\texttt{group} 和 \texttt{j} 把线性线程号映射到蝶形组和组内位置。每个线程只写两个独占元素，因此同一 stage 无写冲突。不同 workgroup 无法用块内屏障完成全局同步，所以普通实现每层启动一个 kernel。
+
+\subsection{旋转因子预计算}
+
+CPU 预先生成正、逆旋转因子表并复制到 GPU 全局内存，kernel 通过 \texttt{j*(n/length)} 查表。这避免每个 GPU 线程执行快速幂。预处理和首次传输应与 steady-state kernel 时间分开报告，否则无法判断查表的真实收益。
+
+\subsection{GPU Barrett 与 Montgomery}
+
+GPU Barrett 使用 \texttt{\_\_umul64hi} 取得 64 位乘法高位；Montgomery 使用低 32 位乘法和右移：
+
+\begin{lstlisting}[title=GPU Montgomery模乘,label={lst:gpu-mont},language={C++}]
+__host__ __device__ __forceinline__
+u32 montgomery_reduce(u64 value) {
+    u32 m = static_cast<u32>(value) * MONT_NINV;
+    u64 reduced =
+        (value + static_cast<u64>(m) * MOD) >> 32;
+    if (reduced >= MOD) reduced -= MOD;
+    return static_cast<u32>(reduced);
+}
+__host__ __device__ __forceinline__
+u32 montgomery_mul(u32 left, u32 right) {
+    return montgomery_reduce((u64)left * right);
+}
+\end{lstlisting}
+
+输入、旋转因子和逆变换缩放因子统一进入 Montgomery 域，整个 NTT 中不反复转换。独立模乘实验可以突出规约差异，但完整 NTT 还包含位逆序、旋转因子读取、全局访存和多次 kernel 启动，因此整体加速会被其他开销稀释。
+
+\subsection{LDS 分块}
+
+平时 GPU 实验以 128 线程处理 256 元素，把前 8 个 stage 融合进一个 workgroup，并在 LDS 中使用 \texttt{\_\_syncthreads()}。虽然减少了全局 kernel 启动，但增加了 LDS 搬运和块内屏障；实测 tiled 版本反而变慢。该结果表明共享内存不是“使用后必然加速”，必须同时考虑同步和 occupancy。

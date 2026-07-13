@@ -1,0 +1,97 @@
+\documentclass[a4paper]{article}
+
+% 版式参考 NTT-ALL/并行模板/main.tex
+\input{style/ch_xelatex.tex}
+\input{style/scala.tex}
+
+\usepackage{ctex}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{fancyhdr}
+\usepackage{tabularx}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+\lstset{
+  breaklines=true,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\color{blue!70}\bfseries,
+  commentstyle=\color{red!50!green!50!blue!50},
+  stringstyle=\ttfamily,
+  numbers=left,
+  numberstyle=\tiny\color{blue!50},
+  frame=trbl,
+  rulesepcolor=\color{red!20!green!20!blue!20},
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false
+}
+
+\geometry{a4paper,left=2.3cm,right=2.3cm,top=2.45cm,bottom=2.45cm}
+\pagestyle{fancy}
+\lhead{\kaishu \leftmark}
+\rhead{\kaishu 并行程序设计期末报告}
+\lfoot{}
+\cfoot{\thepage}
+\rfoot{}
+\renewcommand{\headrulewidth}{0.1pt}
+\renewcommand{\footrulewidth}{0pt}
+\setlength{\textfloatsep}{5mm}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.12em}
+
+\definecolor{oldworkcolor}{RGB}{37,90,140}
+\definecolor{newworkcolor}{RGB}{170,55,35}
+\definecolor{fusioncolor}{RGB}{90,90,90}
+\newcommand{\oldwork}{\textcolor{oldworkcolor}{\textbf{【平时作业】}}}
+\newcommand{\newwork}{\textcolor{newworkcolor}{\textbf{【本次新增】}}}
+\newcommand{\fusionwork}{\textcolor{fusioncolor}{\textbf{【融合重构】}}}
+
+\begin{document}
+
+\renewcommand{\contentsname}{目录}
+\renewcommand{\refname}{参考文献}
+\renewcommand{\figurename}{图}
+\renewcommand{\tablename}{表}
+\renewcommand{\today}{\number\year 年 \number\month 月 \number\day 日}
+
+\begin{titlepage}
+  \begin{center}
+    \includegraphics[width=0.8\textwidth]{NKU.png}\\[1cm]
+    \vspace{12mm}
+    \textbf{\huge\kaishu 计算机学院}\\[0.5cm]
+    \textbf{\huge\kaishu 并行程序设计期末报告}\\[1.8cm]
+    \begin{minipage}{0.94\textwidth}
+      \centering
+      \textbf{\LARGE\kaishu 并行程序设计NTT期末综合报告}\\[0.5cm]
+    \end{minipage}\\[2.0cm]
+    \textsc{\LARGE\kaishu 姓名\ :\ 强徽东}\\[0.5cm]
+    \textsc{\LARGE\kaishu 学号\ :\ 2411764}\\[0.5cm]
+    \textsc{\LARGE\kaishu 专业\ :\ 计算机科学与技术}\\[0.5cm]
+    \vfill
+    {\Large \today}
+  \end{center}
+\end{titlepage}
+
+\clearpage
+\tableofcontents
+\newpage
+
+\input{chapters/part1_foundation.tex}
+\input{chapters/part2_parallel.tex}
+\input{chapters/part3_new.tex}
+\input{chapters/part4_evaluation.tex}
+
+
+\end{document}

@@ -1,0 +1,315 @@
+\part{NTT 共同算法基础}
+
+\section{实验背景、研究目标与材料来源}
+
+\subsection{github地址}
+实验相关内容可在 \url{https://github.com/huiqwq/-}查看
+\subsection{问题背景}
+
+给定两个长度为 $n$ 的多项式
+\[
+A(x)=\sum_{i=0}^{n-1}a_ix^i,\qquad
+B(x)=\sum_{i=0}^{n-1}b_ix^i,
+\]
+需要计算
+\[
+C(x)=A(x)B(x)=\sum_{k=0}^{2n-2}c_kx^k,
+\qquad
+c_k=\sum_{i+j=k}a_ib_j\pmod P.
+\]
+朴素实现直接枚举 $(i,j)$，代码如清单 \ref{lst:naive} 所示。
+
+\begin{lstlisting}[title=朴素多项式卷积,label={lst:naive},language={C++}]
+void poly_multiply(int *a, int *b, int *ab, int n, int p) {
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            ab[i + j] = (1LL * a[i] * b[j] % p
+                       + ab[i + j]) % p;
+        }
+    }
+}
+\end{lstlisting}
+
+该代码包含 $n^2$ 次乘加，复杂度为 $O(n^2)$。当 $n=131072$ 时，直接卷积的计算量已无法接受。NTT 把多项式从系数表示变换到点值表示，在点值域逐点相乘后再逆变换，将复杂度降低为 $O(n\log n)$。由于同一 stage 内的蝶形互不冲突，NTT 也天然适合多层次并行。
+
+
+\subsection{平时作业与新增内容标记}
+
+全文使用 \oldwork、\fusionwork 和 \newwork 三种标记。前者表示代码、实验或数据来自平时作业；第二种表示旧材料已按统一问题重新组织；第三种表示本次新增的框架、代码或综合分析。
+
+
+\section{NTT 数学原理与串行基准}\oldwork\ \fusionwork
+
+\subsection{单位根与正逆变换}
+
+在质数模数 $p$ 下，若 $N\mid(p-1)$，可由原根 $g$ 得到 $N$ 次单位根
+\[
+\omega_N=g^{(p-1)/N}\pmod p.
+\]
+NTT 定义为
+\[
+A_k=\sum_{j=0}^{N-1}a_j\omega_N^{jk}\pmod p.
+\]
+逆变换将单位根换成 $\omega_N^{-1}$，并在最后乘以 $N^{-1}\bmod p$。常用模数
+\[
+998244353=119\times2^{23}+1
+\]
+支持最大长度 $2^{23}$ 的 radix-2 NTT，原根通常取 $3$。
+
+\subsection{蝶形分解}
+
+把多项式按偶、奇下标分解后，每层蝶形可写为
+\[
+u=a_{base+j},\qquad
+v=a_{base+j+L/2}\omega_L^j\pmod p,
+\]
+\[
+a_{base+j}=u+v\pmod p,
+\qquad
+a_{base+j+L/2}=u-v\pmod p.
+\]
+长度为 $N$ 的每个 stage 都包含 $N/2$ 个蝶形；同一 stage 内蝶形访问互不重叠，但后一 stage 必须等待前一 stage 完成。这一性质决定了 Pthread barrier、OpenMP 隐式 barrier、MPI 集合通信和 GPU kernel 边界的位置。
+
+\subsection{串行 NTT 基准代码}
+
+清单 \ref{lst:serial-ntt} 给出报告各后端共享的串行逻辑。代码先位逆序，再让 \texttt{len} 从 2 逐层翻倍；每层的 \texttt{wn} 是该层单位根。
+
+\begin{lstlisting}[title=串行迭代 NTT 核心,label={lst:serial-ntt},language={C++}]
+void ntt_serial(vector<u64>& f, u64 mod,
+                u64 root, bool inverse) {
+    int n = (int)f.size();
+    bit_reverse(f);
+    for (int len = 2; len <= n; len <<= 1) {
+        u64 wn = qpow(root, (mod - 1) / len, mod);
+        if (inverse) wn = qpow(wn, mod - 2, mod);
+        int half = len >> 1;
+        for (int base = 0; base < n; base += len) {
+            u64 w = 1;
+            for (int j = 0; j < half; ++j) {
+                u64 u = f[base + j];
+                u64 v = mul_mod(f[base + j + half], w, mod);
+                f[base + j] = add_mod(u, v, mod);
+                f[base + j + half] = sub_mod(u, v, mod);
+                w = mul_mod(w, wn, mod);
+            }
+        }
+    }
+    if (inverse) {
+        u64 inv_n = qpow(n, mod - 2, mod);
+        for (u64& x : f) x = mul_mod(x, inv_n, mod);
+    }
+}
+\end{lstlisting}
+
+该实现也是正确性和性能的基础参照。后续各并行版本只改变 \texttt{base/j} 循环如何分配以及 \texttt{mul\_mod} 如何实现，不改变蝶形的数学结果。
+
+\subsection{位逆序与 DIT/DIF}
+
+迭代 DIT 需要在变换开始前进行位逆序。位逆序由大量不连续交换组成，对 cache 和 GPU 全局内存都不友好。平时 SIMD 与 MPI 实验进一步采用 DIF 正变换与 DIT 逆变换配对：正变换产生位逆序输出，点值乘不依赖排列顺序，逆变换直接接收该顺序，从而省去卷积流程中的显式重排。
+
+DIT 和 DIF 的主要差别是旋转因子与加减运算的先后顺序。DIF 正变换先完成模加减，再将差值乘以旋转因子，并且 stage 长度由 $N$ 逐层减小：
+
+\begin{lstlisting}[title=DIF 正变换核心代码,label={lst:dif-forward},language={C++}]
+void ntt_dif_forward(vector<u64>& f, u64 mod, u64 root) {
+    int n = (int)f.size();
+    for (int len = n; len >= 2; len >>= 1) {
+        int half = len >> 1;
+        u64 wn = qpow(root, (mod - 1) / len, mod);
+        for (int base = 0; base < n; base += len) {
+            u64 w = 1;
+            for (int j = 0; j < half; ++j) {
+                u64 x = f[base + j];
+                u64 y = f[base + j + half];
+                f[base + j] = add_mod(x, y, mod);
+                f[base + j + half] =
+                    mul_mod(sub_mod(x, y, mod), w, mod);
+                w = mul_mod(w, wn, mod);
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+与之配对的 DIT 逆变换按相反方向增大 stage，先将右半部乘以逆旋转因子，再执行加减：
+
+\begin{lstlisting}[title=DIT 逆变换核心代码,label={lst:dit-inverse},language={C++}]
+void intt_dit_inverse(vector<u64>& f, u64 mod, u64 root) {
+    int n = (int)f.size();
+    for (int len = 2; len <= n; len <<= 1) {
+        int half = len >> 1;
+        u64 wn = qpow(root, (mod - 1) / len, mod);
+        wn = qpow(wn, mod - 2, mod);
+        for (int base = 0; base < n; base += len) {
+            u64 w = 1;
+            for (int j = 0; j < half; ++j) {
+                u64 x = f[base + j];
+                u64 y = mul_mod(f[base + j + half], w, mod);
+                f[base + j] = add_mod(x, y, mod);
+                f[base + j + half] = sub_mod(x, y, mod);
+                w = mul_mod(w, wn, mod);
+            }
+        }
+    }
+    u64 inv_n = qpow((u64)n, mod - 2, mod);
+    for (u64& x : f) x = mul_mod(x, inv_n, mod);
+}
+\end{lstlisting}
+
+两次 DIF 正变换的输出都是相同的位逆序排列，因此可以直接逐点相乘；DIT 逆变换恰好接收这种排列，最后再统一乘以 $N^{-1}$。代码中因此不需要调用独立的位逆序交换函数。
+
+需要强调的是，DIT/DIF 的价值不是改变 $O(N\log N)$ 复杂度，而是减少额外交换和不连续访存。它在 CPU、MPI 本地 NTT 与 GPU 上具有相同算法意义。
+
+\section{模乘规约与 CRT 大模数处理}\oldwork\ \fusionwork
+
+\subsection{普通模乘的瓶颈}
+
+NTT 蝶形中最频繁的运算是
+\[
+v=a\cdot w\bmod p.
+\]
+普通 \texttt{a*b\%p} 可能生成整数除法；当 $p$ 接近 $10^9$ 时，32 位操作数的中间乘积已经需要 64 位；更大模数还可能需要 128 位中间结果。因此，规约方式既影响正确性，也影响 SIMD 和 GPU 是否容易实现。
+
+\subsection{Montgomery 规约及代码}
+
+取 $R=2^{32}$，令
+\[
+p'=-p^{-1}\bmod R.
+\]
+Montgomery 规约计算 $TR^{-1}\bmod p$，把除以 $R$ 转化为右移。平时 SIMD 实验中的标量代码如下。
+
+\begin{lstlisting}[title=32位 Montgomery 规约,label={lst:mont-reduce},language={C++}]
+u32 reduce(u64 x) const {
+    u32 q = (u32)((x & 0xffffffffULL) * inv);
+    u64 y = (x + u64(q) * mod) >> 32;
+    if (y >= mod) y -= mod;
+    return u32(y);
+}
+\end{lstlisting}
+
+第 2 行只保留 $x$ 的低 32 位并乘以 $p'$；根据 $p'$ 的定义，$x+qp$ 一定是 $2^{32}$ 的倍数，因此第 3 行可用右移完成除法。最后一次条件减法把结果调整到 $[0,p)$。当输入、旋转因子和 $N^{-1}$ 在整次变换中都保持为 Montgomery 表示时，进入域与退出域的固定成本只支付一次。
+
+\subsection{Barrett 规约}
+
+Barrett 规约的核心是用一次预计算的乘法倒数代替每次模乘中的整数除法。对固定模数 $p$，预计算
+\[
+\mu=\left\lfloor\frac{2^{64}}p\right\rfloor,
+\]
+对 $x=ab<p^2$，利用乘法高位估计商
+\[
+\widehat q=\left\lfloor\frac{x\mu}{2^{64}}\right\rfloor,
+\qquad r=x-\widehat q p.
+\]
+由于 $\widehat q$ 只是近似商，$r$ 可能仍大于模数，最后需要一到两次条件减法把结果调整到 $[0,p)$。平时 MPI 代码的实现如下：
+
+\begin{lstlisting}[title=Barrett 规约与模乘,label={lst:barrett-reduce},language={C++}]
+struct BarrettReducer { u64 mod, mu; };
+BarrettReducer make_barrett(u64 mod) {
+    u64 mu = (u64)((((u128)1) << 64) / mod);
+    return {mod, mu};
+}
+u64 barrett_reduce(u64 x, const BarrettReducer& br) {
+    u64 q = (u64)(((u128)x * br.mu) >> 64);
+    u64 r = x - q * br.mod;
+    if (r >= br.mod) r -= br.mod;
+    if (r >= br.mod) r -= br.mod;
+    return r;
+}
+u64 mul_mod_barrett(u64 a, u64 b, const BarrettReducer& br) {
+    return barrett_reduce(a * b, br);
+}
+\end{lstlisting}
+
+代码中的 宽整数乘法用于取 $x\mu$ 的高 64 位，不再执行 “\texttt{x \% mod}” 对应的整数除法。对本实验使用的 32 位 NTT 友好模数，$ab$ 可以放入 64 位无符号整数。HIP 版本中的 高位乘法指令与这一步等价，因此同一思路可同时用于 CPU 和 GPU。
+
+MPI v3 和 HIP 实验都使用了 Barrett。它能降低本地模乘开销，但若 MPI 主要受通信限制，或完整 HIP NTT 主要受访存和 kernel 启动限制，局部模乘的加速并不会按相同比例反映到总时间上。
+
+\subsection{Lazy Reduction 延迟规约}\newwork
+
+普通蝶形会把每个输出立即规约到 $[0,p)$；Lazy Reduction 则允许中间值暂时保留在更大的等价区间，以减少条件减法次数。它与 Barrett/Montgomery 并不冲突：前者减少规约次数，后两者降低单次模乘规约的成本。
+
+HIP 单模数实验使用 $p=998244353$，满足 $4p<2^{32}$，因此可在 32 位无符号整数中维持 $[0,4p)$ 值域。设输入 $x,y<4p$，先把 $x$ 调整到 $[0,2p)$，再令 $t=yw\bmod p<p$，则 $x+t<3p$ 且 $x+2p-t<4p$：
+
+\begin{lstlisting}[title=适用于998244353的Lazy蝶形,label={lst:lazy-butterfly},language={C++}]
+__device__ inline void lazy_butterfly(u32& x, u32& y, u32 w) {
+    constexpr u32 TWO_P = 2 * MOD;
+    u32 u = x;
+    if (u >= TWO_P) u -= TWO_P;
+    u32 t = barrett_mul(y, w);  // t in [0, p)
+    x = u + t;                  // x in [0, 3p)
+    y = u + TWO_P - t;          // y in [0, 4p)
+}
+u32 normalize(u32 x) {
+    constexpr u32 TWO_P = 2 * MOD;
+    if (x >= TWO_P) x -= TWO_P;
+    return x >= MOD ? x - MOD : x;
+}
+\end{lstlisting}
+
+整个 NTT 期间保持扩展值域，点值乘和逆变换缩放前后再按需要统一标准化。该实现只对满足 $4p<2^{32}$ 的模数安全；四模数 CRT 中的较大模数不满足这一条件，服务器复测应改用 64 位中间数组，或将允许范围缩小到 $[0,2p)$。因此 Lazy Reduction 的核心不仅是删除条件减法，还包括对每个模数和数据类型进行明确的溢出界证明。
+
+\subsection{CRT/Garner 合并}
+
+当目标模数 $P$ 不是 NTT 友好模数，或 $P$ 很大时，程序在四个两两互质的小模数下分别计算 residue，再用增量 CRT 合并。
+
+\begin{lstlisting}[title=增量 CRT 合并一个输出系数,label={lst:crt-combine},language={C++}]
+u64 crt_combine_one(const u64 r[CRT_CNT],
+                    u64 target_mod,
+                    const u64 inv_prod_mod[CRT_CNT]) {
+    u128 x = r[0];
+    u128 prod = CRT_MODS[0].mod;
+
+    for (int i = 1; i < CRT_CNT; ++i) {
+        u64 mi = CRT_MODS[i].mod;
+        u64 cur = (u64)(x % mi);
+        u64 need = (r[i] + mi - cur) % mi;
+        u64 t = mul_mod(need, inv_prod_mod[i], mi);
+        x += prod * t;
+        prod *= mi;
+    }
+    return (u64)(x % target_mod);
+}
+\end{lstlisting}
+
+循环保持不变量 $x\equiv r_j\pmod{p_j}$。每加入一个模数，就求出使新同余成立的混合进制位 $t$。\texttt{u128} 用于容纳四模数乘积。CRT 正确性的关键条件是
+\[
+\prod_i p_i > n(C-1)^2,
+\]
+其中 $C$ 是输入系数上界。平时作业中曾因三模数或第四模数过小导致大模数样例错误，说明模数选择是数学正确性问题，而不是单纯性能参数。
+
+\section{统一 NTT 计算图与跨架构映射}\newwork
+
+\subsection{统一计算层次}
+
+把四次作业重新放入同一计算图，可以得到：
+
+\begin{lstlisting}[title=NTT卷积的统一计算层次]
+batch / test case
+  -> CRT modulus p0 ... p3
+      -> forward(A), forward(B), pointwise, inverse
+          -> stage 0 ... logN-1       // inter-stage dependency
+              -> N/2 butterflies      // independent in one stage
+                  -> mul, add, subtract modulo p
+\end{lstlisting}
+
+最内层模运算适合 SIMD；stage 内蝶形适合 Pthread/OpenMP 或 GPU；CRT 模数之间适合 OpenMP/MPI 粗粒度任务并行；多个批次又可作为更外层任务。融合的核心是选择哪一层交给哪种硬件，而不是把所有技术强行叠加在一个循环上。
+
+\subsection{映射、同步与主要瓶颈}
+
+\begin{table}[H]
+  \centering
+  \caption{NTT 在不同并行体系结构上的映射}
+  \label{tab:architecture-map}
+  \small
+  \begin{tabularx}{\textwidth}{p{2.0cm} p{2.8cm} p{2.5cm} p{2.7cm} X}
+    \toprule
+    层次 & 并行对象 & 数据共享 & 同步位置 & 主要开销 \\
+    \midrule
+    SIMD & 连续 4/8 个蝶形 & 向量寄存器 & 指令内隐式 & 64 位乘积拆分、lane 重排 \\
+    \shortstack{Pthread/\\OpenMP} & stage 内蝶形区间 & 主存与 cache & 每层 barrier & 线程调度、同步、内存带宽 \\
+    MPI & CRT 模数或蝶形块 & 消息显式共享 & Send/Recv 或 Allgatherv & 启动延迟和通信量 \\
+    GPU & 每线程一个蝶形 & 全局内存/LDS & kernel 边界 & 启动、全局访存、occupancy \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+表 \ref{tab:architecture-map} 给出了后文所有版本的统一比较坐标。SIMD 几乎没有显式同步，但受数据布局限制；Pthread/\allowbreak OpenMP 共享数组，通信代价低但每层必须同步；MPI 能扩展到多个进程，却必须显式传输数据；GPU 并行度高，但不同 block 的全局同步通常只能依靠 kernel 边界。

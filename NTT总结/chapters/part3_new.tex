@@ -1,0 +1,144 @@
+\part{在共同算法与并行优化基础上的新增内容}
+
+\section{统一 NTT 算法框架与实验基准}\newwork
+
+\subsection{计划生成与执行分离}
+
+四份平时作业分别生成位逆序表和旋转因子，导致各版本的计时范围不统一。为此，本次新增 \texttt{Plan}，提前统一生成这些数据。之后各并行后端只负责执行蝶形运算，使性能比较更加公平，也避免了重复预处理。
+
+\begin{lstlisting}[title=统一NTT计划结构,label={lst:plan},language={C++}]
+struct Plan {
+    size_t n;
+    Modulus modulus;
+    vector<size_t> bit_reverse;
+    vector<vector<uint32_t>> forward_twiddles;
+    vector<vector<uint32_t>> inverse_twiddles;
+
+    Plan(size_t size, Modulus mod);
+};
+\end{lstlisting}
+
+\texttt{n} 和 \texttt{modulus} 定义数学问题；\texttt{bit\_reverse} 固定排列；两个 twiddle 表消除正逆变换执行期间的快速幂和递推依赖。这样可以分别测量计划构建和 steady-state 变换，也可确保不同后端使用完全相同的旋转因子。
+
+\subsection{统一后端抽象}
+
+CPU 程序把“蝶形由谁执行”封装为后端枚举：
+
+\begin{lstlisting}[title=统一CPU后端分派,label={lst:backend-dispatch},language={C++}]
+enum class Backend { Serial, Pthread, OpenMP, Simd, Hybrid };
+
+void transform(vector<u32>& a, bool inverse,
+               const Plan& plan, Backend backend,
+               int threads) {
+    switch (backend) {
+      case Backend::Serial:
+        transform_serial(a, inverse, plan); break;
+      case Backend::Pthread:
+        transform_pthread(a, inverse, plan, threads); break;
+      case Backend::OpenMP:
+        transform_openmp(a, inverse, plan, threads); break;
+      case Backend::Simd:
+        transform_simd(a, inverse, plan); break;
+      case Backend::Hybrid:
+        transform_hybrid(a, inverse, plan, threads); break;
+    }
+}
+\end{lstlisting}
+
+这里的意义不是强行把 MPI、CPU 与 HIP GPU 编译成同一个程序，而是统一数学输入、计划生成、计时范围和结果格式。各类后端可以保留独立的可执行文件，但必须遵守相同的变换流程和 CSV 字段。
+
+\subsection{统一卷积流程}
+
+\begin{lstlisting}[title=所有后端共享的卷积流程,label={lst:common-flow},language={C++}]
+transform(A, false, plan, backend, threads);
+transform(B, false, plan, backend, threads);
+
+for (size_t i = 0; i < n; ++i)
+    A[i] = mul_mod(A[i], B[i], modulus);
+
+transform(A, true, plan, backend, threads);
+\end{lstlisting}
+
+统一流程避免“某版本计入旋转因子生成、某版本不计”“某版本额外执行 CRT、另一版本只做单模数 NTT”等不公平比较。需要 CRT 时，四个小模数后端也必须以相同输入、相同输出长度和相同合并公式运行。
+
+\subsection{统一结果格式和基本正确性保证}
+
+程序统一输出后端、$N$、线程/rank/block 数、重复次数、均值、标准差和正确性标志。小规模样例与朴素卷积逐元素比较，正式并行版本与串行 NTT 比较，CRT 运行前检查模数乘积覆盖上界。
+
+\section{跨层次性能开销模型}\newwork
+
+\subsection{统一总时间分解}
+
+把任一后端的端到端时间写为
+\[
+T=T_{arith}+T_{memory}+T_{sync}+T_{comm}
+  +T_{launch}+T_{transfer}+T_{plan}.
+\]
+其中 $T_{arith}$ 是蝶形算术，$T_{memory}$ 是缓存或全局内存访问，$T_{sync}$ 是线程/barrier，$T_{comm}$ 是 MPI 通信，$T_{launch}$ 是 GPU kernel 启动，$T_{transfer}$ 是 H2D/D2H，$T_{plan}$ 是旋转因子等预处理。不同架构并非简单改变同一项，而是同时减少和增加不同项。
+
+\subsection{SIMD 与共享内存线程模型}
+
+SIMD 近似为
+\[
+T_{SIMD}\approx \frac{T_{vectorizable}}W
++T_{scalar}+T_{pack/reduce},
+\]
+其中 $W$ 为向量宽度，$T_{pack/reduce}$ 表示 64 位乘积拆分、lane 重排和 Montgomery 规约。因此理论 4 路 NEON 不等于 4 倍加速。
+
+Pthread/OpenMP 可写为
+\[
+T_{thread}(P)\approx \frac{T_{compute}}P
++\log_2N\cdot T_{barrier}
++T_{runtime}+T_{bandwidth}.
+\]
+当 $N$ 小时固定开销占主导；当 $N$ 大时，多线程可能转为内存带宽受限，继续增加线程数也不会线性加速。
+
+\subsection{MPI 两种粒度模型}
+
+CRT 模数级方案近似为
+\[
+T_{mod-MPI}\approx T_{single-modulus}
++T_{broadcast}+T_{gather}+T_{CRT}.
+\]
+四个模数独立，主要通信只发生在输入广播和 residue 汇总。
+
+stage 级方案近似为
+\[
+T_{stage-MPI}\approx \frac{T_{compute}}P
++3\log_2N(\alpha+\beta N),
+\]
+其中 $\alpha$ 为集合通信启动延迟，$\beta$ 为单位数据传输时间。三次 NTT 的逐层 \texttt{Allgatherv} 使通信项随 $N\log N$ 增长，解释了 stage 方案实测明显慢于模数级方案。
+
+\subsection{GPU 端到端模型}
+
+GPU 应区分
+\[
+T_{kernel}=T_{bit-reverse}+T_{butterfly}+T_{pointwise}+T_{scale}
+\]
+与
+\[
+T_{GPU,end}=T_{plan}+T_{H2D}+T_{kernel}+T_{D2H}.
+\]
+独立模乘只反映 $T_{arith}$；完整 NTT 还受位逆序、全局访存和 $O(\log N)$ 次 kernel 启动影响。若数据已驻留 GPU，则 $T_{H2D}$ 和 $T_{D2H}$ 可以由上下游计算摊薄；若仅从 CPU 发起一次小任务，传输可能使 GPU 失去优势。
+
+\section{跨架构评价指标设计}\newwork
+
+\subsection{为什么不能直接排列原始时间}
+
+SIMD、Pthread/OpenMP、MPI 和 HIP 平时实验来自不同 CPU/GPU 与计时边界。把 $42.22$ ms、$67.734$ ms 和 $1.1648$ ms 直接排列并不能说明哪种编程模型更好，因为硬件、模数数量和计时内容不同。跨架构分析应以各平台内部串行基准和端到端开销为中心。
+
+\subsection{归一化指标}
+
+本文采用：
+\begin{itemize}
+  \item 加速比 $S=T_{serial}/T_{parallel}$；
+  \item 并行效率 $E=S/P$；
+  \item 核心时间与端到端时间之比；
+  \item 单次蝶形平均时间（同模数、同流程时）；
+  \item 计算、同步、通信、启动和传输时间占比；
+  \item 不同规模下后端性能曲线的交点。
+\end{itemize}
+
+\subsection{消融实验逻辑}
+
+每个平台按单一变量递进：SIMD 从普通 NTT 到 Montgomery、NEON、DIT/DIF；共享内存从串行 CRT 到 Pthread、OpenMP 模数并行、OpenMP 内部并行和 OpenMP SIMD；MPI 从串行基准到模数级、stage、Barrett、DIT/DIF 和混合并行；GPU 从 runtime modulo 到 Barrett、Montgomery 和 LDS tiled。新增 Lazy Reduction 复测固定模乘方法和并行配置，只改变蝶形值域与规约时机。这样的版本链能把性能变化归因于具体设计，而不是只比较“最慢版本”和“最快版本”。
